@@ -1,0 +1,6 @@
+本网站使用以下本地开源组件，仅用于公式和代码展示：
+
+- MathJax（Apache License 2.0）：离线 SVG 数学公式渲染。
+- PrismJS（MIT License）：Python、Bash 与 JSON 代码高亮。
+
+完整许可文本见本目录对应文件。网站未打包任何字体文件。
