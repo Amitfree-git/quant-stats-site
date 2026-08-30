@@ -617,6 +617,12 @@ a:hover { color: var(--accent-hover); }
 }
 
 
+
+.table-scroll { overflow-x: auto; margin: 1em 0; }
+.article-body table.symbol-read { min-width: 0; font-size: 13px; }
+.article-body table.symbol-read th, .article-body table.symbol-read td { padding: 8px 10px; }
+.symbol-read .MathJax, .symbol-read mjx-container { font-size: 1.05em; }
+
 .inline-figure {
   margin: 1.15rem 0 1.45rem;
   padding: 8px 10px 10px;
