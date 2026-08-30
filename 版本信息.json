@@ -1,9 +1,11 @@
 {
   "name": "量化统计学交互学习网站",
-  "version": "1.0.0",
-  "built_at": "2026-08-29",
-  "lessons": 30,
-  "interactive_labs": 17,
+  "version": "1.1.0",
+  "built_at": "2026-08-30",
+  "prerequisite_chapters": 1,
+  "core_lessons": 30,
+  "learning_units": 31,
+  "interactive_labs": 21,
   "projects": 6,
   "offline": true,
   "external_runtime_dependencies": 0

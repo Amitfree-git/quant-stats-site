@@ -15,6 +15,7 @@
   };
 
   const moduleDescriptions = {
+    '课前预备知识': '把初中数学中的比例、代数、函数、平方、指数、求和与概率语言，接到统计公式和量化研究。',
     '基础与收益分布': '从收益率、均值、波动率、相关性和厚尾入手，建立金融数据的统计直觉。',
     '抽样与统计推断': '理解样本误差、标准误、置信区间、假设检验和统计功效。',
     '回归与因子处理': '掌握 OLS、控制变量、稳健标准误、残差化和因子中性化。',
@@ -23,6 +24,18 @@
     '因子研究': '完整评估 IC、Rank IC、ICIR、分层收益、衰减和 Fama–MacBeth。',
     '回测与机器学习': '建立样本外验证、过拟合审计、Purging、Embargo 与模型治理。',
   };
+
+  function lessonCode(item) {
+    return item?.id === 'p00' ? 'P00' : `L${String(item?.order ?? 0).padStart(2, '0')}`;
+  }
+
+  function moduleCode(module) {
+    return module?.name === '课前预备知识' ? 'PREP' : String(module?.order ?? 0).padStart(2, '0');
+  }
+
+  function moduleRangeLabel(module) {
+    return module?.name === '课前预备知识' ? 'P00' : `L${String(module.start).padStart(2, '0')}–L${String(module.end).padStart(2, '0')}`;
+  }
 
   const escapeHTML = (value = '') => String(value)
     .replace(/&/g, '&amp;')
@@ -127,7 +140,7 @@
           </div>
           <nav class="sidebar-nav" id="sidebar-nav"></nav>
           <footer class="sidebar-footer">
-            <div class="sidebar-progress-head"><span>课程进度</span><strong id="sidebar-progress-label">0 / 30</strong></div>
+            <div class="sidebar-progress-head"><span>学习进度</span><strong id="sidebar-progress-label">0 / ${CONTENT.lessons.length}</strong></div>
             <div class="sidebar-progress-track"><div class="sidebar-progress-bar" id="sidebar-progress-bar"></div></div>
             <a href="#/progress">查看学习记录与本地笔记</a>
           </footer>
@@ -166,7 +179,7 @@
       <section class="nav-section">
         <div class="nav-section-title">学习系统</div>
         ${navLink('#/home', 'home', '首页')}
-        ${navLink('#/lessons', 'book', '30 课课程')}
+        ${navLink('#/lessons', 'book', '课前预备 + 30 课')}
         ${navLink('#/labs', 'flask', `${LABS.length} 个交互实验`)}
         ${navLink('#/projects', 'project', '6 个综合项目')}
         ${navLink('#/formula', 'formula', '公式速查')}
@@ -176,8 +189,8 @@
       ${CONTENT.modules.map(module => {
         const lessons = module.lessonIds.map(id => lessonsById.get(id)).filter(Boolean);
         return `<section class="nav-section">
-          <div class="nav-section-title"><span>模块 ${String(module.order).padStart(2, '0')}</span><span>${module.start}–${module.end}</span></div>
-          ${lessons.map(item => `<a class="nav-link ${state.completed.has(item.id) ? 'completed' : ''}" href="#/lesson/${item.id}" data-item-id="${item.id}"><span class="lesson-no">L${String(item.order).padStart(2, '0')}</span><span class="nav-title">${escapeHTML(item.title)}</span><span class="done-dot" aria-label="已完成"></span></a>`).join('')}
+          <div class="nav-section-title"><span>${module.name === '课前预备知识' ? '课前预备' : `模块 ${moduleCode(module)}`}</span><span>${moduleRangeLabel(module)}</span></div>
+          ${lessons.map(item => `<a class="nav-link ${state.completed.has(item.id) ? 'completed' : ''}" href="#/lesson/${item.id}" data-item-id="${item.id}"><span class="lesson-no">${lessonCode(item)}</span><span class="nav-title">${escapeHTML(item.title)}</span><span class="done-dot" aria-label="已完成"></span></a>`).join('')}
         </section>`;
       }).join('')}`;
     updateSidebarProgress();
@@ -243,15 +256,15 @@
         <div class="hero-copy">
           <span class="hero-kicker">Quantitative Statistics · Offline</span>
           <h1>把统计学变成<em>可操作的量化研究工具</em></h1>
-          <p>完整收录 30 课课程、17 个交互实验和 6 个综合项目。调节参数、观察分布、验证公式，并把每一个结论放回因子研究、回测与机器学习场景中审视。</p>
+          <p>完整收录 1 个课前数学衔接章、30 课核心课程、${LABS.length} 个交互实验和 6 个综合项目。先把初中数学接到统计符号，再把公式放回因子研究、回测与机器学习场景中验证。</p>
           <div class="hero-actions">
-            <a class="button" href="${nextLessonRoute()}">${stats.complete ? '继续下一课' : '从第 01 课开始'}</a>
+            <a class="button" href="${nextLessonRoute()}">${stats.complete ? '继续下一单元' : (next?.id === 'p00' ? '从课前预备开始' : '从第 01 课开始')}</a>
             <a class="button ghost" href="#/labs">进入交互实验室</a>
           </div>
         </div>
         <div class="hero-side">
           <div class="hero-stat-grid">
-            <div class="hero-stat"><strong>30</strong><span>系统课程</span></div>
+            <div class="hero-stat"><strong>1 + 30</strong><span>预备章 + 系统课</span></div>
             <div class="hero-stat"><strong>${LABS.length}</strong><span>动态实验</span></div>
             <div class="hero-stat"><strong>6</strong><span>综合项目</span></div>
             <div class="hero-stat"><strong>100%</strong><span>离线计算</span></div>
@@ -260,15 +273,15 @@
         </div>
       </section>
 
-      <div class="section-heading"><div><h2>七个课程模块</h2><p>从分布直觉逐步推进到因子验证与回测治理。</p></div><a href="#/lessons">查看全部课程 →</a></div>
+      <div class="section-heading"><div><h2>八个学习模块</h2><p>先完成数学衔接，再从分布直觉逐步推进到因子验证与回测治理。</p></div><a href="#/lessons">查看全部课程 →</a></div>
       <section class="module-grid">
         ${CONTENT.modules.map(module => {
           const p = moduleProgress(module);
           return `<a class="module-card" href="#/lessons?module=${encodeURIComponent(module.name)}">
-            <span class="module-no">${String(module.order).padStart(2, '0')}</span>
+            <span class="module-no">${moduleCode(module)}</span>
             <h3>${escapeHTML(module.name)}</h3>
             <p>${escapeHTML(moduleDescriptions[module.name] || '')}</p>
-            <div class="module-card-foot"><span>L${String(module.start).padStart(2, '0')}–L${String(module.end).padStart(2, '0')} · ${p.done}/${p.total}</span><span class="mini-progress"><span style="display:block;height:100%;width:${p.pct}%;background:var(--accent);border-radius:inherit"></span></span></div>
+            <div class="module-card-foot"><span>${moduleRangeLabel(module)} · ${p.done}/${p.total}</span><span class="mini-progress"><span style="display:block;height:100%;width:${p.pct}%;background:var(--accent);border-radius:inherit"></span></span></div>
           </a>`;
         }).join('')}
       </section>
@@ -290,7 +303,7 @@
   function lessonCard(item) {
     const complete = state.completed.has(item.id);
     return `<a class="catalog-card" href="#/lesson/${item.id}" data-module-card="${escapeHTML(item.module)}">
-      <span class="eyebrow">L${String(item.order).padStart(2, '0')} · ${escapeHTML(item.module)}</span>
+      <span class="eyebrow">${lessonCode(item)} · ${escapeHTML(item.module)}</span>
       <h2>${escapeHTML(item.title)}</h2>
       <p>${escapeHTML(item.description.slice(0, 150))}</p>
       <div class="card-foot"><span>${complete ? '✓ 已完成' : (item.difficulty || '系统课程')}</span><span class="go">开始学习 →</span></div>
@@ -321,20 +334,20 @@
     const content = document.querySelector('#content-view');
     const modules = ['全部', ...CONTENT.modules.map(x => x.name)];
     content.innerHTML = `<div class="page">
-      <header class="page-header"><div><span class="eyebrow">Structured Curriculum</span><h1>30 课量化统计学课程</h1><p>按顺序学习能够建立完整推理链；也可以从模块筛选进入具体课题。每课均包含公式、量化场景、Python 示例、陷阱、练习和验收标准。</p></div><a class="button" href="${nextLessonRoute()}">继续学习</a></header>
+      <header class="page-header"><div><span class="eyebrow">Structured Curriculum</span><h1>课前预备 + 30 课量化统计学课程</h1><p>先用 P00 把初中数学接到统计符号，再按顺序建立完整推理链。每个单元均包含公式、量化场景、Python 示例、陷阱、练习和验收标准。</p></div><a class="button" href="${nextLessonRoute()}">继续学习</a></header>
       <div class="catalog-filter">${modules.map((m, i) => `<button class="filter-chip ${i === 0 ? 'active' : ''}" type="button" data-filter="${escapeHTML(m)}">${escapeHTML(m)}</button>`).join('')}</div>
       <section class="catalog-grid">${CONTENT.lessons.map(lessonCard).join('')}</section>
     </div>`;
     const initial = decodeURIComponent(route.query.get('module') || '全部');
     filterCatalog([...content.querySelectorAll('[data-filter]')], [...content.querySelectorAll('[data-module-card]')], modules.includes(initial) ? initial : '全部');
-    setTopbar('课程', '30 课课程目录');
+    setTopbar('课程', '课前预备与 30 课目录');
   }
 
   function renderLabs(route) {
     const content = document.querySelector('#content-view');
     const modules = ['全部', ...new Set(LABS.map(x => x.module))];
     content.innerHTML = `<div class="page">
-      <header class="page-header"><div><span class="eyebrow">Interactive Laboratory</span><h1>${LABS.length} 个动态统计实验</h1><p>无需安装 Python。拖动参数即可观察公式、分布、估计量、回归、Bootstrap、因子检验和回测过拟合如何变化。所有数据都留在本机。</p></div><a class="button secondary" href="#/lab/returns">运行第一个实验</a></header>
+      <header class="page-header"><div><span class="eyebrow">Interactive Laboratory</span><h1>${LABS.length} 个动态数学与统计实验</h1><p>无需安装 Python。先用四个预备实验掌握百分数、斜率、指数对数和标准差，再观察分布、推断、回归、Bootstrap、因子检验和回测过拟合。所有数据都留在本机。</p></div><a class="button secondary" href="#/lab/${LABS[0].id}">运行第一个实验</a></header>
       <div class="catalog-filter">${modules.map((m, i) => `<button class="filter-chip ${i === 0 ? 'active' : ''}" type="button" data-filter="${escapeHTML(m)}">${escapeHTML(m)}</button>`).join('')}</div>
       <section class="catalog-grid">${LABS.map(lab => `<a class="catalog-card" href="#/lab/${lab.id}" data-module-card="${escapeHTML(lab.module)}"><span class="eyebrow">LAB ${lab.no} · ${escapeHTML(lab.module)} · ${escapeHTML(lab.level)}</span><h2>${escapeHTML(lab.title)}</h2><p>${escapeHTML(lab.summary)}</p><div class="card-foot"><span>${lab.lessons.length} 个关联课程</span><span class="go">运行实验 →</span></div></a>`).join('')}</section>
     </div>`;
@@ -382,11 +395,11 @@
     const noteValue = state.notes[item.id] || '';
     const content = document.querySelector('#content-view');
     content.innerHTML = `<article class="document-page">
-      <div class="crumbs"><a href="#/home">首页</a><span>/</span><a href="${isLesson ? '#/lessons' : item.kind === 'project' ? '#/projects' : '#/resources'}">${isLesson ? '课程' : item.kind === 'project' ? '综合项目' : '研究资源'}</a><span>/</span><span>${escapeHTML(item.id.toUpperCase())}</span></div>
+      <div class="crumbs"><a href="#/home">首页</a><span>/</span><a href="${isLesson ? '#/lessons' : item.kind === 'project' ? '#/projects' : '#/resources'}">${isLesson ? '课程' : item.kind === 'project' ? '综合项目' : '研究资源'}</a><span>/</span><span>${escapeHTML(isLesson ? lessonCode(item) : item.id.toUpperCase())}</span></div>
       <div class="document-layout">
         <main class="document-main">
           <header class="document-header">
-            <span class="eyebrow">${isLesson ? `L${String(item.order).padStart(2, '0')} · ${escapeHTML(item.module)}` : item.kind === 'project' ? `P${String(item.order).padStart(2, '0')} · 综合项目` : escapeHTML(item.module)}</span>
+            <span class="eyebrow">${isLesson ? `${lessonCode(item)} · ${escapeHTML(item.module)}` : item.kind === 'project' ? `P${String(item.order).padStart(2, '0')} · 综合项目` : escapeHTML(item.module)}</span>
             <h1>${escapeHTML(item.title)}</h1>
             <p>${isLesson ? '概念、公式、量化应用、实现与统计边界的一体化学习单元。' : '保留自 Obsidian 课程包的完整内容，并支持本地笔记与打印。'}</p>
             <div class="document-meta">
@@ -504,7 +517,7 @@
         <div class="progress-detail-card"><h2 style="margin:0 0 13px;font-size:16px">模块进度</h2>${CONTENT.modules.map(module => { const p = moduleProgress(module); return `<div class="module-progress-row"><span>${escapeHTML(module.name)}</span><span class="track"><span style="display:block;height:100%;width:${p.pct}%;background:var(--accent);border-radius:inherit"></span></span><span class="count">${p.done}/${p.total}</span></div>`; }).join('')}</div>
       </section>
       <div class="section-heading"><div><h2>逐课状态</h2><p>点击方框可直接标记或取消完成。</p></div></div>
-      <section class="progress-lessons">${CONTENT.lessons.map(item => `<div class="progress-lesson ${state.completed.has(item.id) ? 'completed' : ''}" data-progress-id="${item.id}"><button class="progress-check" type="button" aria-label="切换 ${escapeHTML(item.title)} 完成状态">${state.completed.has(item.id) ? '✓' : ''}</button><div class="progress-lesson-copy"><span>L${String(item.order).padStart(2, '0')} · ${escapeHTML(item.module)}</span><a href="#/lesson/${item.id}">${escapeHTML(item.title)}</a></div></div>`).join('')}</section>
+      <section class="progress-lessons">${CONTENT.lessons.map(item => `<div class="progress-lesson ${state.completed.has(item.id) ? 'completed' : ''}" data-progress-id="${item.id}"><button class="progress-check" type="button" aria-label="切换 ${escapeHTML(item.title)} 完成状态">${state.completed.has(item.id) ? '✓' : ''}</button><div class="progress-lesson-copy"><span>${lessonCode(item)} · ${escapeHTML(item.module)}</span><a href="#/lesson/${item.id}">${escapeHTML(item.title)}</a></div></div>`).join('')}</section>
       <div class="progress-tools">
         <button class="button secondary" id="export-progress" type="button">${icon('download')}导出进度与笔记</button>
         <label class="button ghost import-label">${icon('upload')}导入备份<input id="import-progress" type="file" accept="application/json,.json"></label>
@@ -628,7 +641,7 @@
   }
 
   function searchResultHTML(entry, query, index) {
-    const kindLabel = entry.kind === 'lab' ? `LAB ${entry.no}` : entry.kind === 'lesson' ? `L${String(entry.order).padStart(2, '0')}` : entry.kind === 'project' ? `P${String(entry.order).padStart(2, '0')}` : '资源';
+    const kindLabel = entry.kind === 'lab' ? `LAB ${entry.no}` : entry.kind === 'lesson' ? lessonCode(entry) : entry.kind === 'project' ? `P${String(entry.order).padStart(2, '0')}` : '资源';
     const snippet = getSnippet(entry, query);
     return `<a class="search-result" data-search-index="${index}" href="${searchRoute(entry)}"><div class="search-result-top"><strong>${highlight(entry.title, query)}</strong><span>${kindLabel} · ${escapeHTML(entry.module || '')}</span></div><p>${highlight(snippet, query)}</p></a>`;
   }

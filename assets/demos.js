@@ -5,6 +5,10 @@
   let activeCleanup = null;
 
   const LABS = [
+    { id: 'prep-percent', no: 'P01', title: '百分数、基点与复利换算', module: '课前预备知识', level: '预备', lessons: ['p00'], summary: '把价格变化、百分数、百分点、基点和小数放到同一套单位系统中，并比较线性累加与逐期复利。' },
+    { id: 'prep-linear', no: 'P02', title: '线性函数、斜率与回归直觉', module: '课前预备知识', level: '预备', lessons: ['p00', 'l12'], summary: '拖动斜率、截距和输入值，观察 y=ax+b 的图形与边际变化，为回归系数建立几何直觉。' },
+    { id: 'prep-growth', no: 'P03', title: '指数、对数与波动率年化', module: '课前预备知识', level: '预备', lessons: ['p00', 'l01', 'l03'], summary: '比较复利、线性近似、对数累计和平方根年化，理解指数、对数与根号在量化公式中的角色。' },
+    { id: 'prep-variance', no: 'P04', title: '离差、平方与标准差', module: '课前预备知识', level: '预备', lessons: ['p00', 'l02', 'l03'], summary: '生成一组数据并加入离群点，观察离差和为何为零、平方离差如何累积，以及标准差为何会被极端值放大。' },
     { id: 'returns', no: '01', title: '收益率、复利与波动拖累', module: '基础与收益分布', level: '入门', lessons: ['l01', 'l02'], summary: '调节两期收益和重复周期，观察简单收益、对数收益、算术平均与最终财富为何可能给出不同直觉。' },
     { id: 'lln', no: '02', title: '大数定律与运行均值', module: '抽样与统计推断', level: '入门', lessons: ['l02', 'l06', 'l08'], summary: '从正态、厚尾与偏态分布连续抽样，观察样本均值如何收敛，以及厚尾为何让收敛过程更不稳定。' },
     { id: 'clt', no: '03', title: '中心极限定理模拟器', module: '抽样与统计推断', level: '核心', lessons: ['l05', 'l07', 'l08'], summary: '改变原始分布、样本量和重复次数，直接比较原始分布与样本均值分布。' },
@@ -359,6 +363,213 @@
 
   // ---------- Lab implementations ----------
   const implementations = {};
+
+
+  implementations['prep-percent'] = (root, meta) => {
+    root.innerHTML = labPage(meta,
+      String.raw`$$R=\frac{P_1-P_0}{P_0},\qquad 1\text{ bp}=0.0001,\qquad W_n=W_0(1+r-c)^n$$`,
+      range('pp-p0', '起始价格 P₀', 10, 200, 1, 100, 'float2') +
+      range('pp-p1', '结束价格 P₁', 5, 300, 1, 108, 'float2') +
+      range('pp-r', '每期毛收益 r', -5, 5, .1, .8, 'pct') +
+      range('pp-cost', '每期成本 c', 0, 100, 1, 8, 'bps') +
+      range('pp-n', '累计期数 n', 1, 252, 1, 60, 'int') +
+      range('pp-wealth', '初始财富 W₀', 10, 1000, 10, 100, 'int'),
+      metricGrid([
+        { id: 'priceRet', label: '价格变化率', hint: '(P₁ − P₀) / P₀' },
+        { id: 'decimal', label: '同一变化的小数', hint: '百分数除以 100' },
+        { id: 'cost', label: '成本的小数', hint: '基点除以 10,000' },
+        { id: 'net', label: '每期净收益', hint: '毛收益 − 成本' },
+        { id: 'compound', label: '复利累计收益', hint: '(1 + r − c)ⁿ − 1' },
+        { id: 'gap', label: '复利与线性差', hint: '复利累计 − n×净收益' },
+      ]),
+      chartCard('pp-chart', '线性累加与逐期复利'),
+      `<p>价格变化率的分母是起始价格；百分数写入代码前通常要除以 100；基点写入代码前要除以 10,000。三者混淆会造成 100 倍或 10,000 倍的错误。</p><p>线性累加 <code>n×r</code> 只是一阶近似。收益或期数较大时，复利路径会明显偏离线性路径；当净收益为负时，财富也不能用简单减法无限外推。</p>`
+    );
+    const update = () => {
+      const p0 = val(root, 'pp-p0'), p1 = val(root, 'pp-p1');
+      const gross = val(root, 'pp-r') / 100;
+      const cost = val(root, 'pp-cost') / 10000;
+      const net = gross - cost;
+      const n = val(root, 'pp-n');
+      const w0 = val(root, 'pp-wealth');
+      const priceRet = p1 / p0 - 1;
+      const compound = Math.pow(1 + net, n) - 1;
+      const linear = n * net;
+      setMetric(root, 'priceRet', pct(priceRet), priceRet >= 0 ? 'good' : 'bad');
+      setMetric(root, 'decimal', fmt(priceRet, 4));
+      setMetric(root, 'cost', fmt(cost, 5));
+      setMetric(root, 'net', pct(net, 3), net >= 0 ? 'good' : 'bad');
+      setMetric(root, 'compound', pct(compound), compound >= 0 ? 'good' : 'bad');
+      setMetric(root, 'gap', pct(compound - linear), Math.abs(compound - linear) > .02 ? 'warn' : '');
+      const compoundPath = [], linearPath = [];
+      for (let t = 0; t <= n; t++) {
+        compoundPath.push({ x: t, y: w0 * Math.pow(1 + net, t) });
+        linearPath.push({ x: t, y: w0 * (1 + t * net) });
+      }
+      Charts.line(root.querySelector('#pp-chart'), [
+        { name: '逐期复利', data: compoundPath },
+        { name: '线性近似', data: linearPath, dash: [6, 4] },
+      ], { title: `每期毛收益 ${(gross * 100).toFixed(2)}%，成本 ${(cost * 10000).toFixed(0)} bp`, xLabel: '期数', yLabel: '财富', height: 340, zeroLine: true });
+    };
+    wireControls(root, update);
+    update();
+    return installResize(update);
+  };
+
+  implementations['prep-linear'] = (root, meta) => {
+    root.innerHTML = labPage(meta,
+      String.raw`$$y=ax+b,\qquad a=\frac{\Delta y}{\Delta x},\qquad \Delta y=a\,\Delta x$$`,
+      range('pl-a', '斜率 a', -3, 3, .1, 1.2, 'float2') +
+      range('pl-b', '截距 b', -5, 5, .1, 1, 'float2') +
+      range('pl-x', '当前输入 x', -8, 8, .1, 2, 'float2') +
+      range('pl-dx', '输入变化 Δx', .5, 5, .1, 2, 'float2'),
+      metricGrid([
+        { id: 'y1', label: '当前输出 y', hint: 'a×x+b' },
+        { id: 'y2', label: '变化后输出', hint: 'a×(x+Δx)+b' },
+        { id: 'dy', label: '输出变化 Δy', hint: 'y₂−y₁' },
+        { id: 'slope', label: 'Δy / Δx', hint: '应等于斜率 a' },
+        { id: 'intercept', label: '纵轴截距', hint: 'x=0 时的 y' },
+        { id: 'xzero', label: '横轴交点', hint: 'a≠0 时 x=−b/a' },
+      ]),
+      chartCard('pl-chart', '线性函数图像'),
+      `<p>斜率不是“线有多高”，而是输入每改变一个单位，输出改变多少。截距表示输入为零时的基准输出。</p><p>在一元回归 <code>y = α + βx + ε</code> 中，<code>β</code> 继承了斜率含义；<code>ε</code> 表示观测点与拟合直线之间的竖直差异。斜率描述关系，不自动证明因果。</p>`
+    );
+    const update = () => {
+      const a = val(root, 'pl-a'), b = val(root, 'pl-b');
+      const x = val(root, 'pl-x'), dx = val(root, 'pl-dx');
+      const y1 = a * x + b, x2 = x + dx, y2 = a * x2 + b;
+      const dy = y2 - y1;
+      setMetric(root, 'y1', fmt(y1, 3));
+      setMetric(root, 'y2', fmt(y2, 3));
+      setMetric(root, 'dy', signed(dy, 3), dy >= 0 ? 'good' : 'bad');
+      setMetric(root, 'slope', fmt(dy / dx, 3));
+      setMetric(root, 'intercept', fmt(b, 3));
+      setMetric(root, 'xzero', Math.abs(a) < 1e-12 ? '斜率为 0，无唯一交点' : fmt(-b / a, 3));
+      const line = [];
+      for (let i = 0; i <= 120; i++) {
+        const xx = -10 + i * 20 / 120;
+        line.push({ x: xx, y: a * xx + b });
+      }
+      Charts.line(root.querySelector('#pl-chart'), [
+        { name: 'y = ax + b', data: line },
+        { name: '两个比较点', data: [{ x, y: y1 }, { x: x2, y: y2 }], points: true, pointRadius: 4, width: 1.4, dash: [4, 4] },
+      ], { title: `y = ${a.toFixed(2)}x ${b >= 0 ? '+' : '−'} ${Math.abs(b).toFixed(2)}`, xLabel: 'x', yLabel: 'y', xExtent: [-10, 10], height: 340, zeroLine: true });
+    };
+    wireControls(root, update);
+    update();
+    return installResize(update);
+  };
+
+  implementations['prep-growth'] = (root, meta) => {
+    root.innerHTML = labPage(meta,
+      String.raw`$$W_n=W_0(1+r)^n,\qquad \ln\frac{W_n}{W_0}=n\ln(1+r),\qquad \sigma_n=\sigma_1\sqrt n$$`,
+      range('pg-r', '每期收益 r', -2, 3, .05, .20, 'pct') +
+      range('pg-n', '累计期数 n', 1, 504, 1, 252, 'int') +
+      range('pg-w0', '初始财富 W₀', 10, 1000, 10, 100, 'int') +
+      range('pg-vol', '单期波动率 σ₁', .1, 5, .1, 1.5, 'pct') +
+      range('pg-annual', '年化期数', 20, 365, 1, 252, 'int'),
+      metricGrid([
+        { id: 'compound', label: '复利累计收益', hint: '(1+r)ⁿ−1' },
+        { id: 'linear', label: '线性近似', hint: 'n×r' },
+        { id: 'log', label: '累计对数收益', hint: 'n×ln(1+r)' },
+        { id: 'recovered', label: '由对数还原', hint: 'exp(log return)−1' },
+        { id: 'annualvol', label: '平方根年化波动', hint: 'σ₁×√期数' },
+        { id: 'double', label: '财富翻倍所需期数', hint: 'r>0 时 ln2/ln(1+r)' },
+      ]),
+      chartCard('pg-chart', '复利与线性近似'),
+      `<p>指数把“重复相乘”压缩为一个符号；对数把乘法转换为加法，因此对数收益便于跨时间累计。复利累计与线性近似的差距会随收益幅度和时间增长。</p><p>波动率乘以平方根期数依赖方差可加等条件。若收益存在自相关、波动聚集或时间尺度变化，不能把它当作永远成立的换算规则。</p>`
+    );
+    const update = () => {
+      const r = val(root, 'pg-r') / 100;
+      const n = val(root, 'pg-n');
+      const w0 = val(root, 'pg-w0');
+      const vol = val(root, 'pg-vol') / 100;
+      const annual = val(root, 'pg-annual');
+      const compound = Math.pow(1 + r, n) - 1;
+      const linear = n * r;
+      const logReturn = n * Math.log(1 + r);
+      const recovered = Math.exp(logReturn) - 1;
+      const annualVol = vol * Math.sqrt(annual);
+      const doublePeriods = r > 0 ? Math.log(2) / Math.log(1 + r) : NaN;
+      setMetric(root, 'compound', pct(compound), compound >= 0 ? 'good' : 'bad');
+      setMetric(root, 'linear', pct(linear), Math.abs(compound - linear) > .05 ? 'warn' : '');
+      setMetric(root, 'log', fmt(logReturn, 4));
+      setMetric(root, 'recovered', pct(recovered));
+      setMetric(root, 'annualvol', pct(annualVol));
+      setMetric(root, 'double', Number.isFinite(doublePeriods) ? `${fmt(doublePeriods, 1)} 期` : '当前收益不为正');
+      const compoundPath = [], linearPath = [];
+      const step = Math.max(1, Math.ceil(n / 240));
+      for (let t = 0; t <= n; t += step) {
+        compoundPath.push({ x: t, y: w0 * Math.pow(1 + r, t) });
+        linearPath.push({ x: t, y: w0 * (1 + t * r) });
+      }
+      if (compoundPath.at(-1)?.x !== n) {
+        compoundPath.push({ x: n, y: w0 * Math.pow(1 + r, n) });
+        linearPath.push({ x: n, y: w0 * (1 + n * r) });
+      }
+      Charts.line(root.querySelector('#pg-chart'), [
+        { name: '指数复利', data: compoundPath },
+        { name: '线性近似', data: linearPath, dash: [6, 4] },
+      ], { title: `r=${(r * 100).toFixed(2)}%，n=${n}`, xLabel: '期数', yLabel: '财富', height: 340, zeroLine: true });
+    };
+    wireControls(root, update);
+    update();
+    return installResize(update);
+  };
+
+  implementations['prep-variance'] = (root, meta) => {
+    let seed = 20260830;
+    root.innerHTML = labPage(meta,
+      String.raw`$$d_i=x_i-\bar x,\qquad \sum_i d_i=0,\qquad s^2=\frac{\sum_i d_i^2}{n-1},\qquad s=\sqrt{s^2}$$`,
+      range('pv-center', '数据中心', -5, 5, .1, 0, 'float2') +
+      range('pv-spread', '基础离散程度', .1, 5, .1, 1.2, 'float2') +
+      range('pv-n', '样本量 n', 5, 24, 1, 12, 'int') +
+      range('pv-outlier', '最后一个观测的离群强度', -8, 8, .5, 4, 'float2'),
+      metricGrid([
+        { id: 'mean', label: '样本均值', hint: '所有观测的算术平均' },
+        { id: 'sumdev', label: '离差之和', hint: '理论上只剩浮点误差' },
+        { id: 'mad', label: '平均绝对离差', hint: '平均绝对距离' },
+        { id: 'var', label: '样本方差', hint: '平方离差和 / (n−1)' },
+        { id: 'std', label: '样本标准差', hint: '方差开平方' },
+        { id: 'share', label: '离群点平方贡献', hint: '最后一点占平方离差和比例' },
+      ]),
+      chartCard('pv-values', '观测值与样本均值') + chartCard('pv-squares', '每个观测的平方离差'),
+      `<p>离差直接相加必然为零，所以不能用离差和衡量波动。取绝对值或平方都能消除正负抵消；方差使用平方，因此对远离均值的观测更敏感。</p><p>标准差是方差的平方根，单位回到原始数据单位。移动“离群强度”并观察平方贡献，可以直观看到极端值为何显著放大标准差。</p>`
+    );
+    const update = () => {
+      const center = val(root, 'pv-center');
+      const spread = val(root, 'pv-spread');
+      const n = val(root, 'pv-n');
+      const outlier = val(root, 'pv-outlier');
+      const rng = mulberry32(seed);
+      const xs = Array.from({ length: n - 1 }, () => center + spread * normal(rng));
+      xs.push(center + outlier * spread);
+      const m = mean(xs);
+      const devs = xs.map(x => x - m);
+      const squares = devs.map(d => d * d);
+      const sumDev = sum(devs);
+      const mad = mean(devs.map(Math.abs));
+      const v = variance(xs, true);
+      const s = Math.sqrt(v);
+      const squareTotal = sum(squares);
+      const share = squareTotal > 0 ? squares.at(-1) / squareTotal : 0;
+      setMetric(root, 'mean', fmt(m, 3));
+      setMetric(root, 'sumdev', Math.abs(sumDev) < 1e-10 ? '≈ 0' : fmt(sumDev, 8), 'good');
+      setMetric(root, 'mad', fmt(mad, 3));
+      setMetric(root, 'var', fmt(v, 3));
+      setMetric(root, 'std', fmt(s, 3));
+      setMetric(root, 'share', pct(share), share > .5 ? 'warn' : '');
+      const labels = xs.map((_, i) => String(i + 1));
+      Charts.line(root.querySelector('#pv-values'), [
+        { name: '观测值', data: xs.map((y, i) => ({ x: i + 1, y })), points: true },
+        { name: '样本均值', data: [{ x: 1, y: m }, { x: n, y: m }], dash: [6, 4] },
+      ], { title: `n=${n}；最后一个观测为可调离群点`, xLabel: '观测序号', yLabel: '数值', xExtent: [1, n], height: 310, zeroLine: true });
+      Charts.bars(root.querySelector('#pv-squares'), labels, squares, { title: '离得越远，平方惩罚增长越快', xLabel: '观测序号', yLabel: '平方离差', height: 310 });
+    };
+    wireControls(root, update, () => { seed += 1; });
+    update();
+    return installResize(update);
+  };
 
   implementations.returns = (root, meta) => {
     let seed = 1;
