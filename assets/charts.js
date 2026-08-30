@@ -451,12 +451,35 @@
   }
 
   
-  function drawL01WealthPath(mount) {
+
+  function ensureCanvas(mount) {
     let canvas = mount.querySelector('canvas');
     if (!canvas) {
       canvas = document.createElement('canvas');
       mount.insertBefore(canvas, mount.firstChild);
     }
+    return canvas;
+  }
+
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function gauss(rand) {
+    const u = Math.max(1e-12, rand());
+    const v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+  }
+
+  function drawL01WealthPath(mount) {
+    const canvas = ensureCanvas(mount);
     const colors = palette();
     line(canvas, [
       {
@@ -486,13 +509,325 @@
     });
   }
 
+  function drawP00NumberLine(mount) {
+    const canvas = ensureCanvas(mount);
+    const { ctx, width, height, colors } = setup(canvas, 168);
+    title(ctx, width, '数轴上的距离', '|−4 − 3| = 7');
+    const xmin = -6, xmax = 6;
+    const left = 28, right = width - 28;
+    const y = 96;
+    const xScale = (x) => left + ((x - xmin) / (xmax - xmin)) * (right - left);
+    ctx.save();
+    ctx.strokeStyle = colors.ink;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(right - 8, y - 5);
+    ctx.lineTo(right, y);
+    ctx.lineTo(right - 8, y + 5);
+    ctx.stroke();
+    ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let t = -5; t <= 5; t++) {
+      const x = xScale(t);
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 6);
+      ctx.lineTo(x, y + 6);
+      ctx.stroke();
+      ctx.fillStyle = colors.muted;
+      ctx.fillText(String(t), x, y + 10);
+    }
+    function dot(v, label, color) {
+      const x = xScale(v);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 6.5, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = colors.ink;
+      ctx.textBaseline = 'bottom';
+      ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(label, x, y - 12);
+    }
+    dot(-4, '−4', colors.negative);
+    dot(3, '3', colors.positive);
+    const x1 = xScale(-4), x2 = xScale(3);
+    ctx.strokeStyle = colors.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1, y + 36);
+    ctx.lineTo(x1, y + 48);
+    ctx.lineTo(x2, y + 48);
+    ctx.lineTo(x2, y + 36);
+    ctx.stroke();
+    ctx.fillStyle = colors.accent;
+    ctx.textBaseline = 'top';
+    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('距离 7', (x1 + x2) / 2, y + 52);
+    ctx.restore();
+  }
+
+  function drawP00Bps(mount) {
+    const canvas = ensureCanvas(mount);
+    bars(canvas,
+      ['8 bp 单边', '16 bp 往返', '25 bp', '1% = 100 bp'],
+      [8, 16, 25, 100],
+      {
+        height: 220,
+        title: '基点有多小',
+        subtitle: '1 bp = 0.01%',
+        yFormatter: (v) => `${Math.round(v)} bp`,
+        includeZero: true,
+      });
+  }
+
+  function drawP00Slope(mount) {
+    const canvas = ensureCanvas(mount);
+    line(canvas, [{
+      name: 'y = 2x + 3',
+      data: [{ x: 0, y: 3 }, { x: 1, y: 5 }, { x: 2, y: 7 }, { x: 3, y: 9 }, { x: 4, y: 11 }],
+      points: true,
+      width: 2.4,
+    }], {
+      height: 230,
+      title: '斜率是「x 增加 1，y 增加多少」',
+      subtitle: '截距 3，斜率 2',
+      xTickValues: [0, 1, 2, 3, 4],
+      yExtent: [0, 12.5],
+      includeZero: true,
+      bottom: 44,
+      top: 52,
+    });
+  }
+
+  function drawP00Compound(mount) {
+    const canvas = ensureCanvas(mount);
+    const colors = palette();
+    const linear = [];
+    const compound = [];
+    for (let n = 0; n <= 15; n++) {
+      linear.push({ x: n, y: 1 + 0.10 * n });
+      compound.push({ x: n, y: Math.pow(1.10, n) });
+    }
+    line(canvas, [
+      { name: '复利 (1.10)ⁿ', data: compound, width: 2.4 },
+      { name: '线性 1 + 0.10n', data: linear, dash: [5, 4], color: colors.muted, width: 1.7 },
+    ], {
+      height: 230,
+      title: '每期 10%，线性近似会越差',
+      subtitle: '起点 1',
+      xTicks: 6,
+      yExtent: [0.8, 4.5],
+      bottom: 44,
+      top: 52,
+    });
+  }
+
+  function drawL02ArithGeo(mount) {
+    const canvas = ensureCanvas(mount);
+    const colors = palette();
+    function path(rets) {
+      const pts = [{ x: 0, y: 1 }];
+      let w = 1;
+      rets.forEach((r, i) => {
+        w *= (1 + r);
+        pts.push({ x: i + 1, y: w });
+      });
+      return pts;
+    }
+    const low = [0.05, 0.05, 0.05, 0.05];
+    const high = [0.25, -0.15, 0.25, -0.15];
+    line(canvas, [
+      { name: '低波动，每期 +5%', data: path(low), points: true, width: 2.4 },
+      { name: '高波动，算术平均同样 +5%', data: path(high), points: true, color: colors.accent2, width: 2.4 },
+    ], {
+      height: 240,
+      title: '算术平均相同，复合增长不同',
+      subtitle: '低波动终值 1.22，高波动 1.13',
+      xTickValues: [0, 1, 2, 3, 4],
+      xFormatter: (v) => (v === 0 ? '起点' : `第 ${v} 期`),
+      yExtent: [0.9, 1.42],
+      bottom: 48,
+      top: 52,
+    });
+  }
+
+  function drawL03Deviations(mount) {
+    const canvas = ensureCanvas(mount);
+    const xs = [2, 4, 6];
+    const mean = 4;
+    const signed = xs.map((x) => x - mean);
+    const squared = signed.map((d) => d * d);
+    bars(canvas,
+      ['2', '4', '6'],
+      [signed, squared],
+      {
+        height: 230,
+        title: '离差相加是 0，平方离差不会抵消',
+        subtitle: '青绿是离差，橙色是平方离差',
+        includeZero: true,
+        colors: undefined,
+      });
+  }
+
+  function drawL03SqrtT(mount) {
+    const canvas = ensureCanvas(mount);
+    const colors = palette();
+    const sigma = 0.01;
+    const sqrtPts = [];
+    for (let t = 1; t <= 252; t++) sqrtPts.push({ x: t, y: sigma * Math.sqrt(t) });
+    const marks = [1, 5, 21, 63, 252].map((t) => ({ x: t, y: sigma * Math.sqrt(t) }));
+    line(canvas, [
+      { name: 'σ√T', data: sqrtPts, width: 2.2 },
+      { name: '日 / 周 / 月 / 季 / 年', data: marks, points: true, color: colors.accent2, width: 0 },
+    ], {
+      height: 230,
+      title: '日波动 1%，按 √T 放大',
+      subtitle: '一年约 15.9%，不是 252%',
+      xTickValues: [1, 63, 126, 189, 252],
+      xFormatter: (v) => ({ 1: '1 日', 63: '季', 126: '半年', 189: '', 252: '1 年' }[v] || String(v)),
+      yExtent: [0, 0.18],
+      yFormatter: (v) => `${(v * 100).toFixed(0)}%`,
+      includeZero: true,
+      bottom: 48,
+      top: 52,
+    });
+  }
+
+  function drawL04Scatter(mount) {
+    const canvas = ensureCanvas(mount);
+    const rand = rng(20260830);
+    const rho = 0.7;
+    const points = [];
+    for (let i = 0; i < 90; i++) {
+      const x = gauss(rand);
+      const y = rho * x + Math.sqrt(1 - rho * rho) * gauss(rand);
+      points.push({ x, y });
+    }
+    scatter(canvas, points, {
+      height: 240,
+      title: 'ρ = 0.7 的线性共变',
+      subtitle: '相关不是因果，极端值会拉动',
+      radius: 3.1,
+      alpha: 0.62,
+    });
+  }
+
+  function drawL04VolCurve(mount) {
+    const canvas = ensureCanvas(mount);
+    const colors = palette();
+    const s1 = 0.20, s2 = 0.20;
+    function curve(rho) {
+      const pts = [];
+      for (let i = 0; i <= 40; i++) {
+        const w = i / 40;
+        const v = w * w * s1 * s1 + (1 - w) * (1 - w) * s2 * s2 + 2 * w * (1 - w) * rho * s1 * s2;
+        pts.push({ x: w, y: Math.sqrt(Math.max(0, v)) });
+      }
+      return pts;
+    }
+    line(canvas, [
+      { name: 'ρ = 1，没有分散化', data: curve(1), dash: [5, 4], color: colors.muted, width: 1.7 },
+      { name: 'ρ = 0.2', data: curve(0.2), width: 2.4 },
+      { name: 'ρ = −0.3，U 形更明显', data: curve(-0.3), color: colors.accent2, width: 2.4 },
+    ], {
+      height: 240,
+      title: '两资产组合波动随权重变化',
+      subtitle: 'σ₁ = σ₂ = 20%',
+      xTickValues: [0, 0.25, 0.5, 0.75, 1],
+      xFormatter: (v) => (v === 0 ? '全资产 2' : v === 1 ? '全资产 1' : v === 0.5 ? '各一半' : ''),
+      yExtent: [0.08, 0.22],
+      yFormatter: (v) => `${(v * 100).toFixed(0)}%`,
+      bottom: 48,
+      top: 52,
+    });
+  }
+
+  function drawL12Fit(mount) {
+    const canvas = ensureCanvas(mount);
+    const rand = rng(12);
+    const points = [];
+    for (let i = 0; i < 22; i++) {
+      const x = 0.4 + i * 0.42;
+      const y = 2 + 1.2 * x + gauss(rand) * 1.15;
+      points.push({ x, y });
+    }
+    const n = points.length;
+    const mx = points.reduce((s, p) => s + p.x, 0) / n;
+    const my = points.reduce((s, p) => s + p.y, 0) / n;
+    let num = 0, den = 0;
+    for (const p of points) {
+      num += (p.x - mx) * (p.y - my);
+      den += (p.x - mx) * (p.x - mx);
+    }
+    const beta = num / den;
+    const alpha = my - beta * mx;
+    const { ctx, width, height, colors } = setup(canvas, 250);
+    title(ctx, width, '拟合直线与残差', `α̂ ≈ ${alpha.toFixed(2)}，β̂ ≈ ${beta.toFixed(2)}`);
+    const area = { left: 52, top: 50, width: width - 74, height: height - 96 };
+    const xExtent = [-0.2, 10.2];
+    const yExtent = finiteExtent(points.map((p) => p.y).concat([alpha, alpha + beta * 10]), [0, 1], 0.12);
+    const scales = drawAxes(ctx, area, xExtent, yExtent, {});
+    ctx.save();
+    ctx.strokeStyle = colors.muted;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.7;
+    ctx.setLineDash([3, 3]);
+    for (const p of points) {
+      const yhat = alpha + beta * p.x;
+      ctx.beginPath();
+      ctx.moveTo(scales.xScale(p.x), scales.yScale(p.y));
+      ctx.lineTo(scales.xScale(p.x), scales.yScale(yhat));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = colors.accent;
+    ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    ctx.moveTo(scales.xScale(0), scales.yScale(alpha));
+    ctx.lineTo(scales.xScale(10), scales.yScale(alpha + beta * 10));
+    ctx.stroke();
+    ctx.fillStyle = colors.ink;
+    ctx.globalAlpha = 0.78;
+    for (const p of points) {
+      ctx.beginPath();
+      ctx.arc(scales.xScale(p.x), scales.yScale(p.y), 3.2, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    legend(ctx, area, [
+      { name: 'OLS 拟合线', color: colors.accent },
+      { name: '残差', color: colors.muted },
+    ]);
+  }
+
+  const INLINE_FIGURES = {
+    'l01-wealth-path': drawL01WealthPath,
+    'p00-number-line': drawP00NumberLine,
+    'p00-bps': drawP00Bps,
+    'p00-slope': drawP00Slope,
+    'p00-compound': drawP00Compound,
+    'l02-arith-geo': drawL02ArithGeo,
+    'l03-deviations': drawL03Deviations,
+    'l03-sqrt-t': drawL03SqrtT,
+    'l04-scatter': drawL04Scatter,
+    'l04-vol-curve': drawL04VolCurve,
+    'l12-fit': drawL12Fit,
+  };
+
   function renderInlineFigures(root) {
     if (!root) return;
     root.querySelectorAll('[data-figure]').forEach(mount => {
       const name = mount.dataset.figure;
-      const draw = () => {
-        if (name === 'l01-wealth-path') drawL01WealthPath(mount);
-      };
+      const drawer = INLINE_FIGURES[name];
+      if (!drawer) return;
+      const draw = () => drawer(mount);
       draw();
       requestAnimationFrame(draw);
       if (mount._qsResize) return;
