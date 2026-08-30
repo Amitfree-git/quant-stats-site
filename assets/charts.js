@@ -450,5 +450,58 @@
     return { area };
   }
 
-  window.QSCharts = { setup, line, scatter, histogram, bars, heatmap, finiteExtent, formatTick, palette };
+  
+  function drawL01WealthPath(mount) {
+    let canvas = mount.querySelector('canvas');
+    if (!canvas) {
+      canvas = document.createElement('canvas');
+      mount.insertBefore(canvas, mount.firstChild);
+    }
+    const colors = palette();
+    line(canvas, [
+      {
+        name: '实际财富',
+        data: [{ x: 0, y: 10 }, { x: 1, y: 11 }, { x: 2, y: 9.9 }],
+        points: true,
+        width: 2.5,
+      },
+      {
+        name: '错觉：平均 0% 持平',
+        data: [{ x: 0, y: 10 }, { x: 1, y: 10 }, { x: 2, y: 10 }],
+        dash: [5, 4],
+        color: colors.muted,
+        width: 1.6,
+      },
+    ], {
+      height: 230,
+      title: '先涨 10% 再跌 10%',
+      subtitle: '10 → 11 → 9.9',
+      xTickValues: [0, 1, 2],
+      xFormatter: (v) => ({ 0: '起点', 1: '涨 10%', 2: '跌 10%' }[v] || ''),
+      yExtent: [9.35, 11.45],
+      yFormatter: (v) => Number(v).toFixed(1),
+      yTicks: 5,
+      bottom: 50,
+      top: 52,
+    });
+  }
+
+  function renderInlineFigures(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-figure]').forEach(mount => {
+      const name = mount.dataset.figure;
+      const draw = () => {
+        if (name === 'l01-wealth-path') drawL01WealthPath(mount);
+      };
+      draw();
+      requestAnimationFrame(draw);
+      if (mount._qsResize) return;
+      if (typeof ResizeObserver === 'undefined') return;
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(mount);
+      mount._qsResize = ro;
+    });
+  }
+
+  window.QSCharts = { setup, line, scatter, histogram, bars, heatmap, finiteExtent, formatTick, palette, renderInlineFigures };
 })();

@@ -490,6 +490,7 @@
       });
       pre.appendChild(button);
     });
+    window.QSCharts?.renderInlineFigures?.(root);
   }
 
   function renderLab(id) {
