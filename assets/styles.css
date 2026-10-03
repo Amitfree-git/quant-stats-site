@@ -717,6 +717,7 @@ a:hover { color: var(--accent-hover); }
   .cov-stage h2 { font-size: 22px; }
   .cov-visual-grid { grid-template-columns: 1fr; gap: 12px; }
   .cov-observe { padding: 16px; }
+  .cov-scatter text { font-size: 24px; }
   .cov-observe p { margin: 8px 0; }
   .cov-table th, .cov-table td { padding: 9px; }
   .cov-step-actions { gap: 8px; }
