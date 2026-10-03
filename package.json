@@ -1,0 +1,11 @@
+{
+  "name": "quant-stats-site-checks",
+  "private": true,
+  "description": "Development checks only; the website still runs fully offline without Node or npm.",
+  "scripts": {
+    "test": "node --test tests/covariance.test.js",
+    "test:browser": "node tests/browser.js",
+    "check": "node --check assets/app.js && node --check assets/charts.js && node --check assets/content.js && node --check assets/demos.js && node --check assets/covariance.js && npm test"
+  },
+  "devDependencies": { "playwright": "1.62.1" }
+}

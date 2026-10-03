@@ -12,6 +12,7 @@
     { id: 'returns', no: '01', title: '收益率、复利与波动拖累', module: '基础与收益分布', level: '入门', lessons: ['l01', 'l02'], summary: '调节两期收益和重复周期，观察简单收益、对数收益、算术平均与最终财富为何可能给出不同直觉。' },
     { id: 'lln', no: '02', title: '大数定律与运行均值', module: '抽样与统计推断', level: '入门', lessons: ['l02', 'l06', 'l08'], summary: '从正态、厚尾与偏态分布连续抽样，观察样本均值如何收敛，以及厚尾为何让收敛过程更不稳定。' },
     { id: 'clt', no: '03', title: '中心极限定理模拟器', module: '抽样与统计推断', level: '核心', lessons: ['l05', 'l07', 'l08'], summary: '改变原始分布、样本量和重复次数，直接比较原始分布与样本均值分布。' },
+    { id: 'covariance', no: '04A', title: '协方差：从三天记录一步步算起', module: '基础与收益分布', level: '入门', lessons: ['l03', 'l04'], summary: '从温度与冰淇淋销量出发，逐步看均值、偏差、乘积与汇总，切换同向、反向和零线性例子，理解正负号与总体 / 样本口径。' },
     { id: 'portfolio', no: '04', title: '相关性与组合风险', module: '基础与收益分布', level: '核心', lessons: ['l03', 'l04'], summary: '调节资产波动率、相关系数和权重，实时查看组合波动率曲线与分散化收益。' },
     { id: 'tails', no: '05', title: '厚尾、VaR 与 Expected Shortfall', module: '基础与收益分布', level: '进阶', lessons: ['l05'], summary: '在相同波动率下比较正态分布与 Student-t 分布的尾部损失，理解“均值和方差相同”不等于风险相同。' },
     { id: 'inference', no: '06', title: '置信区间、t 检验与功效', module: '抽样与统计推断', level: '核心', lessons: ['l08', 'l09', 'l10', 'l11'], summary: '输入样本均值、标准差和样本量，动态计算标准误、置信区间、t 值、p 值与近似检验功效。' },
@@ -363,6 +364,7 @@
 
   // ---------- Lab implementations ----------
   const implementations = {};
+  implementations.covariance = (root, meta) => window.QSCovariance.render(root, meta);
 
 
   implementations['prep-percent'] = (root, meta) => {
