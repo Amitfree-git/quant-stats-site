@@ -70,7 +70,7 @@
         <section class="interpretation"><h2>现在再把过程写成公式</h2><p class="cov-formula">总体协方差 = Σ［（温度 − 温度均值）×（销量 − 销量均值）］÷ n</p><p>Σ（读作 Sigma，西格玛）就是“把每一天的结果加起来”；n 是天数。样本协方差把分母改成 n − 1。</p>
           <details><summary>为什么有 n 和 n − 1 两种口径？</summary><p>若只描述这完整的 3 天，把它们视为总体，除以 3。若用这 3 天的随机样本去估计更大总体的协方差，通常除以 3 − 1 = 2；在独立同分布等条件下，这样得到无偏估计。改分母不改变正负方向，也不能让少量数据自动变得可靠。</p></details>
           <h3>先记住这四件事</h3><ul><li>“共同低于均值”也是同向，所以负 × 负为正。</li><li>协方差受单位影响：把销量从“支”改为“打”，数值会缩小为原来的 1/12，关系没有改变。</li><li>协方差为 0 不等于独立，也不等于完全没有关系。</li><li>正协方差不保证赚钱，不说明因果；它只描述两组数据的线性共同变化。</li></ul>
-          <details><summary>下一小步：与相关系数有什么联系？</summary><p>两组标准差都非零时，用协方差除以两组标准差的乘积，就得到无单位、介于 −1 与 +1 的 Pearson 相关系数。分子与分母要采用一致的总体或样本口径。它仍只衡量线性关系；这里先不需要学习矩阵。</p></details>
+          <details><summary>下一小步：与相关系数有什么联系？</summary><p>两组标准差都非零时，用协方差除以两组标准差的乘积，就得到无单位、介于 −1 与 +1 的 Pearson 相关系数。分子与分母要采用一致的总体或样本口径。它仍只衡量线性关系；这里先不需要学习矩阵。</p><p>继续读 L04：<a href="#/lesson/l04?section=correlation-units">换单位，不换关系</a> · <a href="#/lesson/l04?section=correlation-volatility">ρ = 1，波动也能不同</a>。</p></details>
         </section>
         <section class="interpretation cov-quiz" aria-label="协方差小练习"><h2>不看答案，试着判断</h2><p>选一个答案后才会显示反馈。答错可以重试。</p>${QUIZ.map((q, i) => `<fieldset><legend>${i + 1}. ${q.question}</legend><div class="cov-options">${q.options.map((o, j) => `<button class="button secondary" type="button" data-question="${i}" data-answer="${j}" aria-pressed="false">${o}</button>`).join('')}</div><p id="cov-feedback-${i}" class="cov-feedback" aria-live="polite" hidden></p></fieldset>`).join('')}</section>
         <p class="cov-footer">这次能说清“先减均值、再相乘、最后汇总”，就够了。<a href="#/lesson/l04">回到课程继续阅读 →</a></p>

@@ -13,7 +13,7 @@ const base = 'http://127.0.0.1:8766';
       try { if ((await fetch(base)).ok) break; } catch (_) {}
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    browser = await chromium.launch();
+    browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE } : {});
     fs.mkdirSync('test-results', { recursive: true });
     for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
       const page = await browser.newPage({ viewport });
@@ -74,6 +74,54 @@ const base = 'http://127.0.0.1:8766';
       await page.locator('#article-body').waitFor();
       assert.equal(await page.locator('#article-body details[open]').count(), 0);
       assert.ok(await page.locator('#article-body a[href="#/lab/covariance"]').count() >= 1);
+      // Embedded correlation lessons: image bytes, unit scaling, portfolios, hidden answers and repeated changes.
+      await page.locator('#cor-unit').waitFor();
+      for (const image of await page.locator('.cor-figure img').all()) {
+        await image.scrollIntoViewIfNeeded();
+        await image.evaluate(async img => { if (!img.complete) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; }); if (!img.naturalWidth) throw new Error('image missing'); });
+      }
+      assert.match(await page.locator('#cor-unit-result [data-cor-cov]').textContent(), /166.667/);
+      await page.locator('#cor-unit').selectOption('groups');
+      assert.match(await page.locator('#cor-unit-result [data-cor-cov]').textContent(), /16.667/);
+      assert.equal(await page.locator('#cor-unit-result [data-cor-rho]').textContent(), 'ρ = 1');
+      await page.locator('#cor-unit').selectOption('cups');
+      await page.locator('#cor-unit').selectOption('groups');
+      assert.match(await page.locator('#cor-unit-result').textContent(), /1\/10/);
+      assert.equal(await page.locator('#cor-units-answer').getAttribute('open'), null);
+      await page.locator('#cor-units-answer summary').click();
+      assert.match(await page.locator('#cor-units-answer').textContent(), /ρ = −1/);
+      await page.locator('#cor-units-answer summary').click();
+      assert.equal(await page.locator('#cor-units-answer').getAttribute('open'), null);
+      await page.locator('#cor-unit').scrollIntoViewIfNeeded();
+      await page.screenshot({path: `test-results/correlation-units-${viewport.width}.png`});
+      assert.equal(await page.locator('#cor-asset-result [data-cor-vol]').textContent(), '2.449%');
+      await page.locator('#cor-asset').selectOption('C');
+      assert.equal(await page.locator('#cor-asset-result [data-cor-rho]').textContent(), 'ρ = -1');
+      assert.equal(await page.locator('#cor-asset-result [data-cor-vol]').textContent(), '0.816%');
+      await page.locator('#cor-asset').selectOption('B');
+      await page.locator('#cor-asset').selectOption('C');
+      assert.equal(await page.locator('#cor-volatility-answer').getAttribute('open'), null);
+      await page.locator('#cor-volatility-answer summary').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#cor-volatility-answer').getAttribute('open'), '');
+      await page.keyboard.press('Enter');
+      await page.locator('#cor-asset').scrollIntoViewIfNeeded();
+      await page.screenshot({path: `test-results/correlation-volatility-${viewport.width}.png`});
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'correlation page overflow');
+      await page.locator('#theme-toggle').click();
+      assert.equal(await page.locator('#cor-asset').inputValue(), 'C');
+      assert.equal(await page.locator('#cor-asset-result [data-cor-vol]').textContent(), '0.816%');
+      // Direct links are the public URLs shared for each section.
+      await page.goto(`${base}/#/lesson/l04?section=correlation-units`);
+      await page.locator('#cor-unit').waitFor();
+      assert.equal(await page.locator('#cor-unit').inputValue(), 'cups');
+      await page.goto(`${base}/#/lesson/l04?section=correlation-volatility`);
+      await page.locator('#cor-asset').waitFor();
+      assert.equal(await page.locator('#cor-asset').inputValue(), 'B');
+      await page.goBack(); await page.locator('#cor-unit').waitFor();
+      await page.goForward(); await page.locator('#cor-asset').waitFor();
+      assert.equal(await page.locator('[data-correlation-demo="volatility"]').count(), 1);
+      console.log(`PASS correlation ${viewport.width}: images, exact teaching models, unit/asset switches, exercises, keyboard, theme, route history, no overflow`);
+
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
@@ -95,3 +143,4 @@ const base = 'http://127.0.0.1:8766';
     }
   } finally { if (browser) await browser.close(); server.kill(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
+

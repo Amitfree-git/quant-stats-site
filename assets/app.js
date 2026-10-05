@@ -465,6 +465,7 @@
 
   function enhanceArticle(root) {
     if (!root) return;
+    window.QSCorrelation?.mount(root);
     if (window.Prism?.highlightAllUnder) window.Prism.highlightAllUnder(root);
     root.querySelectorAll('pre').forEach(pre => {
       if (pre.querySelector('.code-copy')) return;
