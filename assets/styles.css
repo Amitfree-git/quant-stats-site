@@ -724,3 +724,19 @@ a:hover { color: var(--accent-hover); }
   .cov-step-actions .button { padding: 10px; font-size: 13px; }
   .cov-quiz fieldset { padding: 12px; }
 }
+
+
+/* Small correlation lessons embedded in L04. */
+.cor-daily { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 12px; }
+.cor-date { color: var(--ink-soft); font-size: 13px; }
+.cor-figure { margin: 24px 0; }
+.cor-figure img { display: block; width: 100%; max-width: 760px; height: auto; margin: auto; border: 1px solid var(--line); border-radius: 12px; }
+.cor-figure figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 10px; }
+.cor-interactive { margin: 24px 0; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); }
+.cor-interactive .control { max-width: 460px; }
+.cor-interactive select { max-width: 100%; }
+.cor-interactive h3 { margin-top: 0; }
+.cor-interactive td { font-variant-numeric: tabular-nums; }
+.cor-interactive [data-cor-rho], .cor-interactive [data-cor-vol] { color: var(--accent); }
+.cor-formula { padding: 16px; background: var(--accent-soft); border-radius: 8px; }
+@media (max-width: 650px) { .cor-interactive { padding: 14px; } }

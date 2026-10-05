@@ -3,9 +3,11 @@
   "private": true,
   "description": "Development checks only; the website still runs fully offline without Node or npm.",
   "scripts": {
-    "test": "node --test tests/covariance.test.js",
+    "test": "node --test tests/*.test.js",
     "test:browser": "node tests/browser.js",
-    "check": "node --check assets/app.js && node --check assets/charts.js && node --check assets/content.js && node --check assets/demos.js && node --check assets/covariance.js && npm test"
+    "check": "node --check assets/app.js && node --check assets/charts.js && node --check assets/content.js && node --check assets/demos.js && node --check assets/covariance.js && node --check assets/correlation.js && npm test"
   },
-  "devDependencies": { "playwright": "1.62.1" }
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
 }
