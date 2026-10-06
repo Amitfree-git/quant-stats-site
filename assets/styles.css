@@ -740,3 +740,11 @@ a:hover { color: var(--accent-hover); }
 .cor-interactive [data-cor-rho], .cor-interactive [data-cor-vol] { color: var(--accent); }
 .cor-formula { padding: 16px; background: var(--accent-soft); border-radius: 8px; }
 @media (max-width: 650px) { .cor-interactive { padding: 14px; } }
+
+/* Allocation controls for the bounded, perfectly negative-correlation lesson. */
+.cor-weight-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 20px; }
+.cor-weight-actions .button { white-space: normal; min-height: 44px; }
+.cor-interactive input[type="range"] { display: block; width: 100%; min-height: 44px; accent-color: var(--accent); }
+.cor-interactive [data-cor-weight-vol] { color: var(--accent); }
+
+.cor-interactive input[type="range"]:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
