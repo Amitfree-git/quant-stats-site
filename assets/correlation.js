@@ -1,7 +1,8 @@
-/* Two bounded, equal-probability teaching models; no market data or network calls. */
+/* Bounded, equal-probability teaching models; no market data or network calls. */
 (function (scope) {
   'use strict';
   const MODELS = Object.freeze({ temperature: [20, 25, 30], cups: [100, 150, 200], A: [-2, 0, 2], B: [-4, 0, 4], C: [4, 0, -4] });
+  const POSITIVE_MODEL = Object.freeze({ A: Object.freeze([-3, -1, 1, 3]), B: Object.freeze([-1, -3, 3, 1]) });
   function stats(x, y) {
     if (!Array.isArray(x) || !Array.isArray(y) || !x.length || x.length !== y.length || !x.every(Number.isFinite) || !y.every(Number.isFinite)) throw new RangeError('需要有效的等长成对数值。');
     const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
@@ -50,6 +51,15 @@
         host.querySelector('#cor-weight-equal').addEventListener('click', () => { slider.value = '45'; update(); });
         host.querySelector('#cor-weight-match').addEventListener('click', () => { slider.value = '60'; update(); });
         update();
+      } else if (host.dataset.correlationDemo === 'positive') {
+        host.innerHTML = '<h3>动手核对：同涨同跌与完全同步</h3><p>先做上面的小练习，再切换核对。四种完整情景各占 25%，A、B 各占期初资金 50%；只改变收益配对，不改变各自波动。</p><label class="control" for="cor-positive-case"><span class="control-label">B 的四种收益</span><select id="cor-positive-case"><option value="imperfect">今天的例子：−1%、−3%、+3%、+1%</option><option value="synchronous">完全同步：−3%、−1%、+1%、+3%</option></select></label><div id="cor-positive-result" aria-live="polite" aria-atomic="true"></div>';
+        const select = host.querySelector('#cor-positive-case');
+        const update = () => {
+          const synchronous = select.value === 'synchronous', a = POSITIVE_MODEL.A, b = synchronous ? a : POSITIVE_MODEL.B;
+          const s = stats(a, b), p = portfolio(a, b, 0.5), variance = p.sd * p.sd;
+          host.querySelector('#cor-positive-result').innerHTML = table(['同一持有期', '情景 1', '情景 2', '情景 3', '情景 4'], [['A 收益率', ...a.map(v => num(v) + '%')], ['B 收益率', ...b.map(v => num(v) + '%')], ['等权组合收益率', ...p.returns.map(v => num(v) + '%')], ['偏差乘积（百分点²）', ...s.products.map(num)]]) + `<p>总体协方差：<strong data-cor-positive-cov>${num(s.cov)}</strong>（百分点）²；<strong data-cor-positive-rho>ρ = ${num(s.rho)}</strong>。</p><p>A、B 各自标准差都为 ${num(s.sdX)}%；组合方差 <strong data-cor-positive-var>${num(variance)}</strong>（百分点）²，组合标准差 <strong data-cor-positive-vol>${num(p.sd)}%</strong>。</p><p>公式核对：0.25 × 5 + 0.25 × 5 + 0.5 × ${num(s.cov)} = ${num(variance)}（百分点）²。</p><p>${synchronous ? '偏差保持固定正比例，完全同步，组合波动与单独持有相同。' : '四种情景都同涨同跌，但幅度比例不同；正相关也能降低本例的整体波动。'} 降低波动不保证不亏损，数值未年化；教学模型，无收益承诺。</p>`;
+        };
+        select.addEventListener('change', update); update();
       } else if (host.dataset.correlationDemo === 'volatility') {
         host.innerHTML = '<h3>动手：比较等权组合</h3><p>先完成上方小练习，再切换资产核对。A 固定为 −2%、0、+2%，两项资产各占期初资金的一半。</p><label class="control"><span class="control-label">和 A 搭配的资产</span><select id="cor-asset"><option value="B">B：−4%、0、+4%（同向）</option><option value="C">C：+4%、0、−4%（反向）</option></select></label><div id="cor-asset-result" aria-live="polite" aria-atomic="true"></div>';
         const select = host.querySelector('select');
@@ -61,7 +71,7 @@
       }
     });
   }
-  const api = { stats, portfolio, models: MODELS, mount };
+  const api = { stats, portfolio, models: MODELS, positiveModel: POSITIVE_MODEL, mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (scope) scope.QSCorrelation = api;
 })(typeof window === 'undefined' ? null : window);

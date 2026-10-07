@@ -143,6 +143,36 @@ const base = 'http://127.0.0.1:8766';
       await page.locator('#cor-weight-a').scrollIntoViewIfNeeded();
       await page.screenshot({path: `test-results/risk-weights-${viewport.width}.png`});
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'weight page overflow');
+      // Positive correlation is not a count of matching signs; retain comparison state through theme changes.
+      await page.locator('#cor-positive-case').waitFor();
+      assert.equal(await page.locator('#cor-positive-case').inputValue(), 'imperfect');
+      assert.equal(await page.locator('[data-cor-positive-cov]').textContent(), '3');
+      assert.equal(await page.locator('[data-cor-positive-rho]').textContent(), 'ρ = 0.6');
+      assert.equal(await page.locator('[data-cor-positive-var]').textContent(), '4');
+      assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2%');
+      assert.equal(await page.locator('#cor-positive-answer').getAttribute('open'), null);
+      await page.locator('#cor-positive-answer summary').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#cor-positive-answer').getAttribute('open'), '');
+      assert.match(await page.locator('#cor-positive-answer').textContent(), /2.236%/);
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#cor-positive-answer').getAttribute('open'), null);
+      await page.locator('#cor-positive-case').selectOption('synchronous');
+      assert.equal(await page.locator('[data-cor-positive-rho]').textContent(), 'ρ = 1');
+      assert.equal(await page.locator('[data-cor-positive-cov]').textContent(), '5');
+      assert.equal(await page.locator('[data-cor-positive-var]').textContent(), '5');
+      assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2.236%');
+      await page.locator('#cor-positive-case').selectOption('imperfect');
+      await page.locator('#cor-positive-case').selectOption('synchronous');
+      await page.locator('#theme-toggle').click();
+      assert.equal(await page.locator('#cor-positive-case').inputValue(), 'synchronous');
+      assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2.236%');
+      await page.locator('#cor-positive-case').focus();
+      await page.keyboard.press('ArrowUp');
+      assert.equal(await page.locator('#cor-positive-case').inputValue(), 'imperfect');
+      assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2%');
+      await page.locator('#cor-positive-case').scrollIntoViewIfNeeded();
+      await page.screenshot({path: `test-results/positive-correlation-${viewport.width}.png`});
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'positive correlation page overflow');
       // Direct links are the public URLs shared for each section.
       await page.goto(`${base}/#/lesson/l04?section=correlation-units`);
       await page.locator('#cor-unit').waitFor();
@@ -164,6 +194,15 @@ const base = 'http://127.0.0.1:8766';
       assert.equal(await page.locator('#cor-weight-a').inputValue(), '45');
       console.log(`PASS risk weights ${viewport.width}: image, 45/45 and 60/30, slider endpoints, keyboard, folded exercise, theme and route history`);
       console.log(`PASS correlation ${viewport.width}: images, exact teaching models, unit/asset switches, exercises, keyboard, theme, route history, no overflow`);
+      await page.goto(`${base}/#/lesson/l04?section=positive-correlation-diversification`);
+      await page.locator('#cor-positive-case').waitFor();
+      assert.equal(await page.locator('#cor-positive-case').inputValue(), 'imperfect');
+      await page.locator('#cor-positive-case').selectOption('synchronous');
+      await page.goBack(); await page.locator('#cor-weight-a').waitFor();
+      await page.goForward(); await page.locator('#cor-positive-case').waitFor();
+      assert.equal(await page.locator('[data-correlation-demo="positive"]').count(), 1);
+      assert.equal(await page.locator('#cor-positive-case').inputValue(), 'imperfect');
+      console.log(`PASS positive correlation ${viewport.width}: image, covariance/formula comparison, repeated changes, keyboard, folded answer, theme and route history`);
 
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
@@ -186,4 +225,3 @@ const base = 'http://127.0.0.1:8766';
     }
   } finally { if (browser) await browser.close(); server.kill(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
-
