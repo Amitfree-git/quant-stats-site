@@ -19,6 +19,14 @@
     const result = stats(returns, returns);
     return { returns, mean: result.meanX, sd: result.sdX, weightedA: weightA * assets.sdX, weightedC: (1 - weightA) * assets.sdY };
   }
+  function matrixTerms(x, y, weightA) {
+    if (!Number.isFinite(weightA) || weightA < 0 || weightA > 1) throw new RangeError('资金权重必须在 0 到 1 之间。');
+    const s = stats(x, y), w = weightA, v = 1 - w;
+    const varianceX = s.dx.reduce((sum, n) => sum + n * n, 0) / x.length;
+    const varianceY = s.dy.reduce((sum, n) => sum + n * n, 0) / y.length;
+    const terms = [varianceX * w * w, s.cov * w * v, s.cov * v * w, varianceY * v * v];
+    return { matrix: [[varianceX, s.cov], [s.cov, varianceY]], terms, variance: terms.reduce((sum, n) => sum + n, 0) };
+  }
   const precise = n => Math.abs(n) < 1e-10 ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 4 });
   const num = n => Math.abs(n) < 1e-10 ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 3 });
   const list = a => a.map(num).join('、');
@@ -60,6 +68,20 @@
           host.querySelector('#cor-positive-result').innerHTML = table(['同一持有期', '情景 1', '情景 2', '情景 3', '情景 4'], [['A 收益率', ...a.map(v => num(v) + '%')], ['B 收益率', ...b.map(v => num(v) + '%')], ['等权组合收益率', ...p.returns.map(v => num(v) + '%')], ['偏差乘积（百分点²）', ...s.products.map(num)]]) + `<p>总体协方差：<strong data-cor-positive-cov>${num(s.cov)}</strong>（百分点）²；<strong data-cor-positive-rho>ρ = ${num(s.rho)}</strong>。</p><p>A、B 各自标准差都为 ${num(s.sdX)}%；组合方差 <strong data-cor-positive-var>${num(variance)}</strong>（百分点）²，组合标准差 <strong data-cor-positive-vol>${num(p.sd)}%</strong>。</p><p>公式核对：0.25 × 5 + 0.25 × 5 + 0.5 × ${num(s.cov)} = ${num(variance)}（百分点）²。</p><p>${synchronous ? '偏差保持固定正比例，完全同步，组合波动与单独持有相同。' : '四种情景都同涨同跌，但幅度比例不同；正相关也能降低本例的整体波动。'} 降低波动不保证不亏损，数值未年化；教学模型，无收益承诺。</p>`;
         };
         select.addEventListener('change', update); update();
+      } else if (host.dataset.correlationDemo === 'matrix') {
+        host.innerHTML = '<h3>动手核对：矩阵不变，只改权重</h3><p>先做上面的小练习，再移动滑块核对。资产矩阵始终为「5、3；3、5」，四个情景各占 25%。</p><label class="control" for="cor-matrix-weight"><span class="control-label">A 的期初资金比例（%），其余为 B</span><input id="cor-matrix-weight" type="range" min="0" max="100" step="1" value="50" aria-describedby="cor-matrix-help"></label><p id="cor-matrix-help">每次移动 1 个百分点；可用方向键调整。</p><div class="cor-weight-actions"><button type="button" class="button" id="cor-matrix-equal">A 50% / B 50%</button><button type="button" class="button" id="cor-matrix-three-one">A 75% / B 25%</button></div><div id="cor-matrix-result" aria-live="polite" aria-atomic="true"></div>';
+        const slider = host.querySelector('#cor-matrix-weight');
+        const update = () => {
+          const percent = Number(slider.value), w = percent / 100, v = 1 - w;
+          const m = matrixTerms(POSITIVE_MODEL.A, POSITIVE_MODEL.B, w), p = portfolio(POSITIVE_MODEL.A, POSITIVE_MODEL.B, w);
+          const [aa, ab, ba, bb] = m.terms;
+          slider.setAttribute('aria-valuetext', `A ${percent}%，B ${100 - percent}%`);
+          host.querySelector('#cor-matrix-result').innerHTML = `<p><strong data-cor-matrix-allocation>A ${percent}% / B ${100 - percent}%</strong>；原矩阵不变。</p>` + table(['行权重 × 列权重', `A 列：${precise(w)}`, `B 列：${precise(v)}`], [[`A 行：${precise(w)}`, `5 × ${precise(w)} × ${precise(w)} = <strong data-cor-matrix-aa>${precise(aa)}</strong>`, `3 × ${precise(w)} × ${precise(v)} = <strong data-cor-matrix-ab>${precise(ab)}</strong>`], [`B 行：${precise(v)}`, `3 × ${precise(v)} × ${precise(w)} = <strong data-cor-matrix-ba>${precise(ba)}</strong>`, `5 × ${precise(v)} × ${precise(v)} = <strong data-cor-matrix-bb>${precise(bb)}</strong>`]]) + `<p>四格相加：${m.terms.map(precise).join(' + ')} = <strong data-cor-matrix-var>${precise(m.variance)}</strong>（百分点）²。<br>组合波动率：<strong data-cor-matrix-vol>${num(Math.sqrt(m.variance))}%</strong>。</p><p>两个交叉格合计 ${precise(ab + ba)}（百分点）²；四格已经相加，不再额外乘 2。</p>` + table(['逐情景验算', '情景 1', '情景 2', '情景 3', '情景 4'], [['组合收益率', ...p.returns.map(r => precise(r) + '%')]]) + `<p>收益均值为 0，四个收益平方取平均也得 <strong data-cor-matrix-check>${precise(p.sd * p.sd)}</strong>（百分点）²。显示最多 4 位小数，波动率显示 3 位；计算不使用显示的舍入值。数值未年化，教学模型不承诺收益。</p>`;
+        };
+        slider.addEventListener('input', update);
+        host.querySelector('#cor-matrix-equal').addEventListener('click', () => { slider.value = '50'; update(); });
+        host.querySelector('#cor-matrix-three-one').addEventListener('click', () => { slider.value = '75'; update(); });
+        update();
       } else if (host.dataset.correlationDemo === 'volatility') {
         host.innerHTML = '<h3>动手：比较等权组合</h3><p>先完成上方小练习，再切换资产核对。A 固定为 −2%、0、+2%，两项资产各占期初资金的一半。</p><label class="control"><span class="control-label">和 A 搭配的资产</span><select id="cor-asset"><option value="B">B：−4%、0、+4%（同向）</option><option value="C">C：+4%、0、−4%（反向）</option></select></label><div id="cor-asset-result" aria-live="polite" aria-atomic="true"></div>';
         const select = host.querySelector('select');
@@ -71,7 +93,7 @@
       }
     });
   }
-  const api = { stats, portfolio, models: MODELS, positiveModel: POSITIVE_MODEL, mount };
+  const api = { stats, portfolio, matrixTerms, models: MODELS, positiveModel: POSITIVE_MODEL, mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (scope) scope.QSCorrelation = api;
 })(typeof window === 'undefined' ? null : window);
