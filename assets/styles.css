@@ -748,3 +748,7 @@ a:hover { color: var(--accent-hover); }
 .cor-interactive [data-cor-weight-vol] { color: var(--accent); }
 
 .cor-interactive input[type="range"]:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+
+/* Four-cell matrix: labels carry meaning independently of the tint. */
+.cor-matrix .cor-matrix-own { background: var(--bg-soft); font-weight: 700; }
+.cor-interactive [data-cor-matrix-var], .cor-interactive [data-cor-matrix-vol] { color: var(--accent); }
