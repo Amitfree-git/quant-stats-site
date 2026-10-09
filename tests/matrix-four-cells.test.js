@@ -51,6 +51,6 @@ test('matrix lesson is unique, source-matched, searchable, illustrated and folde
 });
 test('index versions every app asset for the new lesson so ordinary links load coherently', () => {
   const html=fs.readFileSync('index.html','utf8');
-  for(const name of ['content.js','correlation.js','styles.css','app.js'])assert.ok(html.includes(`assets/${name}?v=20261008-matrix-four-cells`));
+  for(const name of ['content.js','correlation.js','styles.css','app.js'])assert.ok(html.includes(`assets/${name}?v=20261009-sample-denominator`));
   assert.equal(html.includes('20261007-positive-correlation'),false);
 });
