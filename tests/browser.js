@@ -240,6 +240,31 @@ const base = 'http://127.0.0.1:8766';
       assert.equal(await page.locator('#cor-matrix-weight').inputValue(),'50');
       console.log(`PASS matrix four cells ${viewport.width}: image, four terms, 50/50 and 75/25, endpoints, keyboard, repeated buttons, folded answer, theme, history, no overflow`);
 
+      // Daily consolidation: both denominators, full image and default-folded answers.
+      await page.goto(`${base}/#/lesson/l04?section=sample-covariance-denominator`);
+      await page.locator('#sample-covariance-denominator').waitFor();
+      const sampleSection = page.locator('[aria-labelledby="sample-covariance-denominator"]');
+      const sampleImage = sampleSection.locator('img');
+      await sampleImage.scrollIntoViewIfNeeded();
+      await sampleImage.evaluate(img => img.decode());
+      assert.deepEqual(await sampleImage.evaluate(img => [img.naturalWidth,img.naturalHeight]),[1600,1960]);
+      assert.match(await sampleSection.textContent(), /2.309/);
+      for (const id of ['sample-denominator-why','sample-denominator-answer']) {
+        const detail=page.locator(`#${id}`);
+        assert.equal(await detail.evaluate(el=>el.open),false);
+        await detail.locator('summary').click();assert.equal(await detail.evaluate(el=>el.open),true);
+        await detail.locator('summary').press('Enter');assert.equal(await detail.evaluate(el=>el.open),false);
+        await detail.locator('summary').press('Enter');assert.equal(await detail.evaluate(el=>el.open),true);
+        await detail.locator('summary').click();assert.equal(await detail.evaluate(el=>el.open),false);
+      }
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      await page.locator('#sample-covariance-denominator').scrollIntoViewIfNeeded();
+      await page.screenshot({path:`test-results/sample-denominator-${viewport.width}.png`});
+      await page.locator('#theme-toggle').click();
+      assert.equal(await sampleSection.isVisible(),true);
+      await page.locator('#theme-toggle').click();
+      console.log(`PASS sample denominator ${viewport.width}: direct section, 1600x1960 image, both disclosures, repeat click/keyboard, theme, no overflow`);
+
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
