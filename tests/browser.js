@@ -265,6 +265,32 @@ const base = 'http://127.0.0.1:8766';
       await page.locator('#theme-toggle').click();
       console.log(`PASS sample denominator ${viewport.width}: direct section, 1600x1960 image, both disclosures, repeat click/keyboard, theme, no overflow`);
 
+      // Same-correlation risk-scale lesson: direct link, image and accessible disclosure.
+      await page.goto(`${base}/#/lesson/l04?section=same-correlation-higher-risk`);
+      await page.locator('#same-correlation-higher-risk').waitFor();
+      const riskSection=page.locator('[aria-labelledby="same-correlation-higher-risk"]');
+      const riskImage=riskSection.locator('img');
+      await riskImage.scrollIntoViewIfNeeded();await riskImage.evaluate(img=>img.decode());
+      assert.deepEqual(await riskImage.evaluate(img=>[img.naturalWidth,img.naturalHeight]),[1800,2500]);
+      assert.match(await riskSection.textContent(),/12÷20 = 0.6/);
+      const riskAnswer=page.locator('#same-risk-answer');
+      assert.equal(await riskAnswer.evaluate(el=>el.open),false);
+      await riskAnswer.locator('summary').click();assert.equal(await riskAnswer.evaluate(el=>el.open),true);
+      await riskAnswer.locator('summary').press('Enter');assert.equal(await riskAnswer.evaluate(el=>el.open),false);
+      await riskAnswer.locator('summary').press('Enter');assert.equal(await riskAnswer.evaluate(el=>el.open),true);
+      await riskAnswer.locator('summary').click();assert.equal(await riskAnswer.evaluate(el=>el.open),false);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      await page.locator('#same-correlation-higher-risk').scrollIntoViewIfNeeded();
+      await page.screenshot({path:`test-results/risk-scale-${viewport.width}.png`});
+      await page.locator('#theme-toggle').click();assert.equal(await riskSection.isVisible(),true);
+      await page.locator('#theme-toggle').click();
+      await riskSection.locator('a[href="#/lesson/l04?section=sample-covariance-denominator"]').click();
+      assert.match(page.url(),/section=sample-covariance-denominator/);
+      await page.goBack();assert.match(page.url(),/section=same-correlation-higher-risk/);
+      await page.locator('#same-correlation-higher-risk').waitFor();
+      assert.equal(await page.locator('#same-risk-answer').evaluate(el=>el.open),false);
+      console.log(`PASS risk scale ${viewport.width}: direct section, 1800x2500 image, repeated disclosure/keyboard, theme, history, no overflow`);
+
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
