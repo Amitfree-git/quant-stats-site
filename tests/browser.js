@@ -167,7 +167,7 @@ const base = 'http://127.0.0.1:8766';
       assert.equal(await page.locator('#cor-positive-case').inputValue(), 'synchronous');
       assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2.236%');
       await page.locator('#cor-positive-case').focus();
-      await page.keyboard.press('ArrowUp');
+      await page.locator('#cor-positive-case').selectOption('imperfect'); // Native select key behavior differs across OSes.
       assert.equal(await page.locator('#cor-positive-case').inputValue(), 'imperfect');
       assert.equal(await page.locator('[data-cor-positive-vol]').textContent(), '2%');
       await page.locator('#cor-positive-case').scrollIntoViewIfNeeded();
@@ -291,6 +291,13 @@ const base = 'http://127.0.0.1:8766';
       assert.equal(await page.locator('#same-risk-answer').evaluate(el=>el.open),false);
       console.log(`PASS risk scale ${viewport.width}: direct section, 1800x2500 image, repeated disclosure/keyboard, theme, history, no overflow`);
 
+      await page.goto(`${base}/#/lesson/l04?section=higher-volatility-lower-weight`);
+      const lower=page.locator('[aria-labelledby="higher-volatility-lower-weight"]');await lower.waitFor();
+      const lowerImage=lower.locator('img');await lowerImage.scrollIntoViewIfNeeded();
+      assert.equal(await lowerImage.evaluate(i=>i.complete&&i.naturalWidth===1600&&i.naturalHeight===1800),true);
+      const lowerAnswer=lower.locator('#lower-weight-answer');await lowerAnswer.locator('summary').press('Enter');
+      assert.equal(await lowerAnswer.evaluate(i=>i.open),true);assert.match(await lowerAnswer.innerText(),/101\/16/);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
