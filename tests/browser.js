@@ -298,6 +298,53 @@ const base = 'http://127.0.0.1:8766';
       const lowerAnswer=lower.locator('#lower-weight-answer');await lowerAnswer.locator('summary').press('Enter');
       assert.equal(await lowerAnswer.evaluate(i=>i.open),true);assert.match(await lowerAnswer.innerText(),/101\/16/);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      // Correlation sensitivity uses the final 10-percent model and retains old functionality.
+      await page.goto(`${base}/#/lesson/l04?section=correlation-risk-sensitivity`);
+      const sensitivity = page.locator('[aria-labelledby="correlation-risk-sensitivity"]'); await sensitivity.waitFor();
+      const sensitivityImage = sensitivity.locator('img');
+      await sensitivityImage.scrollIntoViewIfNeeded(); await sensitivityImage.evaluate(img => img.decode());
+      assert.deepEqual(await sensitivityImage.evaluate(img => [img.naturalWidth,img.naturalHeight]), [1800,2200]);
+      await page.locator('#cor-sensitivity-rho').waitFor();
+      assert.equal(await page.locator('[data-cor-sensitivity-vol]').textContent(), '7.746%');
+      for (const [rho, variance, vol, change] of [['0','50','7.0711%','0'],['0.2','60','7.746%','+0.6749'],['0.8','90','9.4868%','+2.4158'],['1','100','10%','+2.9289'],['0.2','60','7.746%','+0.6749']]) {
+        await page.locator(`[data-sensitivity-rho="${rho}"]`).click();
+        assert.equal(await page.locator('#cor-sensitivity-rho').inputValue(), rho);
+        assert.equal(await page.locator('[data-cor-sensitivity-var]').textContent(), variance);
+        assert.equal(await page.locator('[data-cor-sensitivity-vol]').textContent(), vol);
+        assert.equal(await page.locator('[data-cor-sensitivity-change]').textContent(), change);
+      }
+      for (const [rho, increment] of [['0','0.6749'],['0.2','0.6206'],['0.8','0.5132']]) {
+        await page.locator(`[data-sensitivity-rho="${rho}"]`).click();
+        assert.equal(await page.locator('[data-cor-sensitivity-step]').textContent(), increment);
+      }
+      const rhoSlider=page.locator('#cor-sensitivity-rho'); await rhoSlider.focus(); await page.keyboard.press('Home');
+      assert.equal(await rhoSlider.inputValue(), '-1'); assert.equal(await page.locator('[data-cor-sensitivity-vol]').textContent(), '0%');
+      await page.keyboard.press('End'); assert.equal(await rhoSlider.inputValue(), '1');
+      assert.equal(await page.locator('[data-cor-sensitivity-vol]').textContent(), '10%');
+      await page.keyboard.press('ArrowLeft'); assert.equal(await rhoSlider.inputValue(), '0.9');
+      assert.equal(await rhoSlider.evaluate(el => {const s=getComputedStyle(el);return s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>0;}), true);
+      await page.locator('[data-sensitivity-rho="0.2"]').click(); await page.locator('#theme-toggle').click();
+      assert.equal(await rhoSlider.inputValue(), '0.2'); assert.equal(await page.locator('[data-cor-sensitivity-vol]').textContent(), '7.746%');
+      for (const id of ['correlation-sensitivity-answer','correlation-basics-review']) {
+        const detail=page.locator(`#${id}`); assert.equal(await detail.evaluate(el => el.open), false);
+        await detail.locator('summary').first().click(); assert.equal(await detail.evaluate(el => el.open), true);
+        assert.match(await detail.textContent(), id.includes('basics') ? /未定义/ : /0.6206/);
+        if (id.includes('basics')) {
+          const answer=page.locator('#correlation-basics-answer'); assert.equal(await answer.evaluate(el => el.open), false);
+          await answer.locator('summary').press('Enter'); assert.equal(await answer.evaluate(el => el.open), true);
+          await answer.locator('summary').press('Enter'); assert.equal(await answer.evaluate(el => el.open), false);
+        }
+        await detail.locator('summary').first().press('Enter'); assert.equal(await detail.evaluate(el => el.open), false);
+        await detail.locator('summary').first().press('Enter'); await detail.locator('summary').first().click();
+        assert.equal(await detail.evaluate(el => el.open), false);
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'sensitivity page overflow');
+      await page.locator('#cor-sensitivity-rho').scrollIntoViewIfNeeded();
+      await page.screenshot({path:`test-results/correlation-sensitivity-${viewport.width}.png`});
+      await page.goto(`${base}/#/lesson/l03`); await page.locator('#article-body').waitFor(); await page.goBack();
+      await page.locator('#cor-sensitivity-rho').waitFor(); assert.equal(await page.locator('[data-correlation-demo="sensitivity"]').count(), 1);
+      assert.equal(await page.locator('#correlation-sensitivity-answer').evaluate(el => el.open), false);
+      console.log(`PASS correlation sensitivity ${viewport.width}: PNG, parameters, increments, endpoints, keyboard, theme, folded practice and basics, history, no overflow`);
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
