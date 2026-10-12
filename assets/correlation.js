@@ -27,6 +27,11 @@
     const terms = [varianceX * w * w, s.cov * w * v, s.cov * v * w, varianceY * v * v];
     return { matrix: [[varianceX, s.cov], [s.cov, varianceY]], terms, variance: terms.reduce((sum, n) => sum + n, 0) };
   }
+  function sensitivityStats(rho) {
+    if (!Number.isFinite(rho) || rho < -1 || rho > 1) throw new RangeError('相关系数必须在 −1 到 1 之间。');
+    const covariance = 100 * rho, variance = 50 * (1 + rho), sd = Math.sqrt(variance);
+    return { covariance, variance, sd, sdChangeFromZero: sd - Math.sqrt(50) };
+  }
   const precise = n => Math.abs(n) < 1e-10 ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 4 });
   const num = n => Math.abs(n) < 1e-10 ? '0' : n.toLocaleString('zh-CN', { maximumFractionDigits: 3 });
   const list = a => a.map(num).join('、');
@@ -68,6 +73,19 @@
           host.querySelector('#cor-positive-result').innerHTML = table(['同一持有期', '情景 1', '情景 2', '情景 3', '情景 4'], [['A 收益率', ...a.map(v => num(v) + '%')], ['B 收益率', ...b.map(v => num(v) + '%')], ['等权组合收益率', ...p.returns.map(v => num(v) + '%')], ['偏差乘积（百分点²）', ...s.products.map(num)]]) + `<p>总体协方差：<strong data-cor-positive-cov>${num(s.cov)}</strong>（百分点）²；<strong data-cor-positive-rho>ρ = ${num(s.rho)}</strong>。</p><p>A、B 各自标准差都为 ${num(s.sdX)}%；组合方差 <strong data-cor-positive-var>${num(variance)}</strong>（百分点）²，组合标准差 <strong data-cor-positive-vol>${num(p.sd)}%</strong>。</p><p>公式核对：0.25 × 5 + 0.25 × 5 + 0.5 × ${num(s.cov)} = ${num(variance)}（百分点）²。</p><p>${synchronous ? '偏差保持固定正比例，完全同步，组合波动与单独持有相同。' : '四种情景都同涨同跌，但幅度比例不同；正相关也能降低本例的整体波动。'} 降低波动不保证不亏损，数值未年化；教学模型，无收益承诺。</p>`;
         };
         select.addEventListener('change', update); update();
+      } else if (host.dataset.correlationDemo === 'sensitivity') {
+        host.innerHTML = '<h3>动手：只改变公式里的相关系数</h3><p>固定 A、B 方差各为 100（百分点）²，单项标准差各为 10%，期初各投一半，同一收益期、未年化。滑杆是公式参数模型；中间值不是四条观测的估计或旧四状态表的重排结果。</p><label class="control" for="cor-sensitivity-rho"><span class="control-label">相关系数 ρ（无单位）</span><input id="cor-sensitivity-rho" type="range" min="-1" max="1" step="0.1" value="0.2" aria-describedby="cor-sensitivity-help"></label><p id="cor-sensitivity-help">每次改变 0.1；可用方向键调整。按钮可快速核对两个增加 0.2 的区间。</p><div class="cor-weight-actions"><button type="button" class="button" data-sensitivity-rho="0">ρ = 0</button><button type="button" class="button" data-sensitivity-rho="0.2">ρ = 0.2</button><button type="button" class="button" data-sensitivity-rho="0.8">ρ = 0.8</button><button type="button" class="button" data-sensitivity-rho="1">ρ = 1</button></div><div id="cor-sensitivity-result" aria-live="polite" aria-atomic="true"></div>';
+        const slider = host.querySelector('#cor-sensitivity-rho');
+        const update = () => {
+          const rho = Number(slider.value), result = sensitivityStats(rho), change = result.sdChangeFromZero;
+          const next = rho <= 0.8 ? sensitivityStats(rho + 0.2) : null;
+          const interval = next ? `<p>再增加 0.2：ρ 从 ${num(rho)} 到 ${num(rho + 0.2)}，组合方差从 ${precise(result.variance)} 到 ${precise(next.variance)}（增加 10（百分点）²）；标准差增加 <strong data-cor-sensitivity-step>${precise(next.sd - result.sd)}</strong> 个百分点。</p>` : '<p>再增加 0.2 会超过相关系数上界 1；请选择 ρ ≤ 0.8 来比较完整区间。</p>';
+          slider.setAttribute('aria-valuetext', `相关系数 ${num(rho)}`);
+          host.querySelector('#cor-sensitivity-result').innerHTML = `<p><strong data-cor-sensitivity-rho>ρ = ${num(rho)}</strong>；协方差 100 × ρ = <strong data-cor-sensitivity-cov>${precise(result.covariance)}</strong>（百分点）²。</p><p>组合方差 50 × (1 + ρ) = <strong data-cor-sensitivity-var>${precise(result.variance)}</strong>（百分点）²。<br>组合标准差 = <strong data-cor-sensitivity-vol>${precise(result.sd)}%</strong>。</p><p>相对 ρ = 0 的标准差 7.0711%，变化 <strong data-cor-sensitivity-change>${change > 0 ? '+' : ''}${precise(change)}</strong> 个百分点。</p>${interval}<p>增量用未舍入数值计算，显示最多 4 位小数。${rho === -1 ? 'ρ = −1 的零波动仅属于本理想公式模型，不代表现实无风险。' : '各自波动没有改变，组合波动仍随共同变化程度改变。'} 教学示例，不承诺收益。</p>`;
+        };
+        slider.addEventListener('input', update);
+        host.querySelectorAll('[data-sensitivity-rho]').forEach(button => button.addEventListener('click', () => { slider.value = button.dataset.sensitivityRho; update(); }));
+        update();
       } else if (host.dataset.correlationDemo === 'matrix') {
         host.innerHTML = '<h3>动手核对：矩阵不变，只改权重</h3><p>先做上面的小练习，再移动滑块核对。资产矩阵始终为「5、3；3、5」，四个情景各占 25%。</p><label class="control" for="cor-matrix-weight"><span class="control-label">A 的期初资金比例（%），其余为 B</span><input id="cor-matrix-weight" type="range" min="0" max="100" step="1" value="50" aria-describedby="cor-matrix-help"></label><p id="cor-matrix-help">每次移动 1 个百分点；可用方向键调整。</p><div class="cor-weight-actions"><button type="button" class="button" id="cor-matrix-equal">A 50% / B 50%</button><button type="button" class="button" id="cor-matrix-three-one">A 75% / B 25%</button></div><div id="cor-matrix-result" aria-live="polite" aria-atomic="true"></div>';
         const slider = host.querySelector('#cor-matrix-weight');
@@ -93,7 +111,7 @@
       }
     });
   }
-  const api = { stats, portfolio, matrixTerms, models: MODELS, positiveModel: POSITIVE_MODEL, mount };
+  const api = { stats, portfolio, matrixTerms, sensitivityStats, models: MODELS, positiveModel: POSITIVE_MODEL, mount };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (scope) scope.QSCorrelation = api;
 })(typeof window === 'undefined' ? null : window);
