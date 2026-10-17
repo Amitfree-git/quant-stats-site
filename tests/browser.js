@@ -397,6 +397,11 @@ const base = 'http://127.0.0.1:8766';
         await page.goto(`${base}/#/lesson/${course.lesson}?section=${course.id}`);
         const section=page.locator(`section[aria-labelledby="${course.id}"]`);await section.waitFor();
         assert.equal(await page.locator(`#${course.id}`).count(),1);
+        const headingAtScrollTarget=id=>{
+          const bounds=document.getElementById(id)?.getBoundingClientRect();
+          return bounds&&bounds.top>=50&&bounds.top<=200;
+        };
+        await page.waitForFunction(headingAtScrollTarget,course.id);
         const image=section.locator('img');await image.scrollIntoViewIfNeeded();
         const dimensions=await image.evaluate(async img=>{await img.decode();return [img.naturalWidth,img.naturalHeight];});
         assert.deepEqual(dimensions,[course.width,course.height]);
@@ -412,7 +417,13 @@ const base = 'http://127.0.0.1:8766';
         await summary.click();assert.equal(await answer.evaluate(el=>el.open),false);
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${course.id} horizontal overflow`);
         const toc=page.locator(`[data-toc-link="${course.id}"]`);assert.equal(await toc.count(),1);
-        if(viewport.width>650){await toc.click();assert.equal(await page.locator(`#${course.id}`).isVisible(),true);}
+        if(viewport.width>650){
+          await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+          assert.equal(await page.locator(`#${course.id}`).evaluate(el=>{
+            const bounds=el.getBoundingClientRect();return bounds.bottom<0||bounds.top>innerHeight;
+          }),true,`${course.id} starts outside viewport before TOC navigation`);
+          await toc.click();await page.waitForFunction(headingAtScrollTarget,course.id);
+        }
         await page.goto(`${base}/#/lesson/l01`);await page.locator('#article-body').waitFor();await page.goBack();
         await page.locator(`#${course.id}`).waitFor();assert.equal(await page.locator(`#${course.answer}`).evaluate(el=>el.open),false);
         console.log(`PASS backlog ${course.id} ${viewport.width}: original PNG, TOC/deep link, repeated click/Enter, theme/history, folded answer, no overflow`);
