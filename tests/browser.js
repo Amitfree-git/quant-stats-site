@@ -386,6 +386,51 @@ const base = 'http://127.0.0.1:8766';
       assert.equal(await page.locator('#cov-step-count').textContent(), '1 / 5');
       await page.locator('#cov-next').click();
       assert.equal(await page.locator('#cov-step-count').textContent(), '2 / 5');
+      // October 14–17 backlog: same original images, direct links, TOC and native folded answers.
+      const backlogCourses = [
+        {lesson:'l04',id:'covariance-pairing',answer:'pairing-answer',width:1800,height:2280,result:/协方差不变/},
+        {lesson:'l03',id:'volatility-observation-windows',answer:'windows-answer',width:1600,height:1380,result:/1\.58%/},
+        {lesson:'l03',id:'squared-deviations-volatility',answer:'squared-answer',width:1600,height:1900,result:/2\.12%/},
+        {lesson:'l23',id:'cross-sectional-pearson-ic',answer:'ic-daily-answer',width:1800,height:2280,result:/0\.742/}
+      ];
+      for(const course of backlogCourses){
+        await page.goto(`${base}/#/lesson/${course.lesson}?section=${course.id}`);
+        const section=page.locator(`section[aria-labelledby="${course.id}"]`);await section.waitFor();
+        assert.equal(await page.locator(`#${course.id}`).count(),1);
+        const headingAtScrollTarget=id=>{
+          const bounds=document.getElementById(id)?.getBoundingClientRect();
+          return bounds&&bounds.top>=50&&bounds.top<=200;
+        };
+        await page.waitForFunction(headingAtScrollTarget,course.id);
+        const image=section.locator('img');await image.scrollIntoViewIfNeeded();
+        const dimensions=await image.evaluate(async img=>{await img.decode();return [img.naturalWidth,img.naturalHeight];});
+        assert.deepEqual(dimensions,[course.width,course.height]);
+        assert.ok((await image.getAttribute('alt')).length>40);
+        await section.locator('.cor-figure').screenshot({path:`test-results/backlog-${course.id}-image-${viewport.width}.png`});
+        const answer=page.locator(`#${course.answer}`),summary=answer.locator('summary');
+        assert.equal(await answer.evaluate(el=>el.open),false);
+        await summary.click();assert.equal(await answer.evaluate(el=>el.open),true);assert.match(await answer.textContent(),course.result);
+        await summary.press('Enter');assert.equal(await answer.evaluate(el=>el.open),false);
+        await summary.press('Enter');assert.equal(await answer.evaluate(el=>el.open),true);
+        await answer.screenshot({path:`test-results/backlog-${course.id}-answer-${viewport.width}.png`});
+        await page.locator('#theme-toggle').click();assert.equal(await answer.evaluate(el=>el.open),true);
+        await summary.click();assert.equal(await answer.evaluate(el=>el.open),false);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${course.id} horizontal overflow`);
+        const toc=page.locator(`[data-toc-link="${course.id}"]`);assert.equal(await toc.count(),1);
+        if(viewport.width>650){
+          await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
+          assert.equal(await page.locator(`#${course.id}`).evaluate(el=>{
+            const bounds=el.getBoundingClientRect();return bounds.bottom<0||bounds.top>innerHeight;
+          }),true,`${course.id} starts outside viewport before TOC navigation`);
+          await toc.click();await page.waitForFunction(headingAtScrollTarget,course.id);
+        }
+        await page.goto(`${base}/#/lesson/l01`);await page.locator('#article-body').waitFor();await page.goBack();
+        await page.locator(`#${course.id}`).waitFor();assert.equal(await page.locator(`#${course.answer}`).evaluate(el=>el.open),false);
+        console.log(`PASS backlog ${course.id} ${viewport.width}: original PNG, TOC/deep link, repeated click/Enter, theme/history, folded answer, no overflow`);
+      }
+      await page.goto(`${base}/#/lesson/l23`);await page.locator('#article-body').waitFor();
+      assert.match(await page.locator('#article-body').textContent(),/day\[\[factor_col, return_col\]\]/);
+      assert.ok(!(await page.locator('#article-body').textContent()).includes('dayfactor_col'));
       // Unrelated home, old lesson and existing lab still render.
       await page.goto(`${base}/#/home`); await page.locator('h1').waitFor();
       await page.goto(`${base}/#/lesson/l03`); await page.locator('#article-body').waitFor();
