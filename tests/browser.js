@@ -345,6 +345,36 @@ const base = 'http://127.0.0.1:8766';
       await page.locator('#cor-sensitivity-rho').waitFor(); assert.equal(await page.locator('[data-correlation-demo="sensitivity"]').count(), 1);
       assert.equal(await page.locator('#correlation-sensitivity-answer').evaluate(el => el.open), false);
       console.log(`PASS correlation sensitivity ${viewport.width}: PNG, parameters, increments, endpoints, keyboard, theme, folded practice and basics, history, no overflow`);
+      // Foundation lesson 10 uses native folded answers and the unchanged original PNG.
+      await page.goto(`${base}/#/lesson/l04?section=centered-covariance`);
+      await page.locator('#centered-covariance').waitFor();
+      assert.equal(await page.locator('#centered-covariance').count(), 1);
+      const centeringSection=page.locator('section[aria-labelledby="centered-covariance"]');
+      assert.match(await centeringSection.textContent(), /11 − 3 × 3 = 2/);
+      assert.match(await centeringSection.textContent(), /20 − 3 × 6 = 2/);
+      for(const id of ['centering-recap-answer','centering-formula','centering-answer']) {
+        const detail=page.locator(`#${id}`), summary=detail.locator('summary');
+        assert.equal(await detail.evaluate(el=>el.open), false);
+        await summary.click(); assert.equal(await detail.evaluate(el=>el.open), true);
+        assert.match(await detail.textContent(), id==='centering-recap-answer' ? /相关系数不定义/ : id==='centering-formula' ? /E\[AB\]/ : /5%/);
+        await summary.press('Enter'); assert.equal(await detail.evaluate(el=>el.open), false);
+        await summary.press('Enter'); assert.equal(await detail.evaluate(el=>el.open), true);
+        await summary.click(); assert.equal(await detail.evaluate(el=>el.open), false);
+      }
+      const centeringImage=centeringSection.locator('img');
+      await centeringImage.scrollIntoViewIfNeeded();
+      await centeringImage.evaluate(async img=>{await img.decode();if(img.naturalWidth!==1800||img.naturalHeight!==2740)throw new Error('original PNG dimensions mismatch');});
+      assert.match(await centeringImage.getAttribute('alt'), /平移/);
+      assert.match(await centeringImage.locator('..').getAttribute('href'), /why-center-before-covariance\.png$/);
+      await page.locator('#theme-toggle').click();
+      assert.equal(await page.locator('#centering-answer').evaluate(el=>el.open), false);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1), true, 'centering page overflow');
+      await page.locator('#centering-practice').scrollIntoViewIfNeeded();
+      await page.screenshot({path:`test-results/centered-covariance-${viewport.width}.png`});
+      await page.goto(`${base}/#/lesson/l03`);await page.locator('#article-body').waitFor();await page.goBack();
+      await page.locator('#centered-covariance').waitFor();
+      assert.equal(await page.locator('#centering-answer').evaluate(el=>el.open), false);
+      console.log(`PASS centered covariance ${viewport.width}: original PNG, source-matched arithmetic, repeat disclosures, keyboard, theme, history, no overflow`);
       await page.locator('#article-body a[href="#/lab/covariance"]').first().click();
       await page.locator('#cov-next').waitFor();
       await page.locator('#cov-next').click();
