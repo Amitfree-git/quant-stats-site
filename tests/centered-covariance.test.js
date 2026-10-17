@@ -31,7 +31,7 @@ test('centering keeps the complete four-state variance and covariance unchanged 
 test('lesson 10 is unique, source matched, searchable and has folded answers', () => {
   const l=lesson(), section=l.html.match(/<section class="cor-daily" aria-labelledby="centered-covariance">[\s\S]*?<\/section>/)?.[0];
   assert.ok(section,'missing approved foundation lesson 10');
-  assert.ok(l.html.includes('接下来可读十节相关性小课'));
+  assert.ok(l.html.includes('接下来可读十一节相关性小课'));
   const src=fs.readFileSync('课程源文件/01-基础与收益分布/L04-协方差、相关性与组合风险.md','utf8').replaceAll('../../assets/images/','assets/images/');
   assert.ok(src.includes(section));
   for(const id of ids) { assert.equal(l.html.split(`id="${id}"`).length,2); assert.equal(l.toc.filter(x=>x.id===id).length,1); }
